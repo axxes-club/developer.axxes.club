@@ -1,7 +1,15 @@
 import "server-only"
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db, schema } from "@/lib/db"
-import { PLANS, planAllows, planAllowsProduct, planByKey, type PlanDefinition } from "./catalog"
+import {
+  PLANS,
+  planAllows,
+  planAllowsProduct,
+  planByKey,
+  topPlan,
+  unlimitedFrom,
+  type PlanDefinition,
+} from "./catalog"
 
 /**
  * The paywall.
@@ -14,6 +22,13 @@ import { PLANS, planAllows, planAllowsProduct, planByKey, type PlanDefinition } 
  */
 export type Gate = {
   plan: PlanDefinition
+  /**
+   * True when a superadmin in this workspace is being served the top tier with
+   * no ceilings. Every caller that bills, meters or rate-limits should read
+   * this rather than inspecting the plan: the plan alone cannot say whether a
+   * limit is a real limit or an exempt one.
+   */
+  exempt: boolean
   allowed: (feature: string) => boolean
   productAllowed: (product: string) => boolean
   limitFor: <K extends keyof PlanDefinition["limits"]>(k: K) => number | null
@@ -21,34 +36,69 @@ export type Gate = {
 }
 
 export async function gateFor(tenantId: string): Promise<Gate> {
-  // The tenant row is the record of truth today; the subscriptions table is
-  // where a paid plan will live. Reading both means the gate works on the
-  // day the first customer upgrades, without a second code path.
-  const [sub] = await db
-    .select({ planKey: schema.subscriptions.planKey })
-    .from(schema.subscriptions)
-    .where(and(eq(schema.subscriptions.tenantId, tenantId), eq(schema.subscriptions.status, "active")))
+  // A superadmin in the workspace gets the top tier with every ceiling
+  // removed, and is never charged for it. Checked first and in the same round
+  // trip, because an exempt owner hitting a paywall is the worst possible
+  // failure for this function — it would lock AXXES out of AXXES.
+  const [membership] = await db
+    .select({
+      isSuperadmin: schema.user.isSuperadmin,
+      planKey: schema.subscriptions.planKey,
+      tier: schema.tenants.subscriptionTier,
+    })
+    .from(schema.tenantMemberships)
+    .innerJoin(schema.user, eq(schema.user.id, schema.tenantMemberships.userId))
+    .innerJoin(schema.tenants, eq(schema.tenants.id, schema.tenantMemberships.tenantId))
+    .leftJoin(
+      schema.subscriptions,
+      and(
+        eq(schema.subscriptions.tenantId, tenantId),
+        eq(schema.subscriptions.status, "active"),
+      ),
+    )
+    .where(
+      and(
+        eq(schema.tenantMemberships.tenantId, tenantId),
+        sql`${schema.tenantMemberships.deletedAt} is null`,
+      ),
+    )
     .limit(1)
 
-  const [tenant] = await db
-    .select({ tier: schema.tenants.subscriptionTier })
-    .from(schema.tenants)
-    .where(eq(schema.tenants.id, tenantId))
-    .limit(1)
+  const hasSuperadmin = await hasSuperadminIn(tenantId)
 
-  const key = sub?.planKey ?? tenant?.tier ?? "free"
-  const plan = planByKey(key)
+  // Billing and metering still record the work — an exempt account is not an
+  // invisible one — but nothing is charged and nothing is refused.
+  const plan = hasSuperadmin
+    ? unlimitedFrom(topPlan())
+    : planByKey(membership?.planKey ?? membership?.tier ?? "free")
 
   return {
     plan,
-    allowed: (feature) => planAllows(plan.key, feature),
-    productAllowed: (product) => planAllowsProduct(plan.key, product),
-    limitFor: (k) => plan.limits[k],
+    exempt: hasSuperadmin,
+    allowed: (feature) => hasSuperadmin || planAllows(plan.key, feature),
+    productAllowed: (product) => hasSuperadmin || planAllowsProduct(plan.key, product),
+    limitFor: (k) => (hasSuperadmin ? null : plan.limits[k]),
     reason: (feature) =>
-      planAllows(plan.key, feature)
+      hasSuperadmin || planAllows(plan.key, feature)
         ? null
         : `The ${plan.name} plan does not include this. Upgrade to reach it.`,
   }
+}
+
+/** Does anyone in this workspace hold superadmin? */
+async function hasSuperadminIn(tenantId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.tenantMemberships)
+    .innerJoin(schema.user, eq(schema.user.id, schema.tenantMemberships.userId))
+    .where(
+      and(
+        eq(schema.tenantMemberships.tenantId, tenantId),
+        sql`${schema.tenantMemberships.deletedAt} is null`,
+        eq(schema.user.isSuperadmin, true),
+      ),
+    )
+  return (row?.n ?? 0) > 0
 }
 
 /** What the upgrade page shows: the cheapest plan that unlocks this. */

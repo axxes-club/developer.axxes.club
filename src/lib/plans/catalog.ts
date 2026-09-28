@@ -113,6 +113,40 @@ export function planByKey(key: string | null | undefined): PlanDefinition {
   return PLANS.find((p) => p.key === (key ?? "free")) ?? PLANS[0]
 }
 
+/**
+ * The highest plan we sell. Derived from the list rather than named, so adding
+ * a tier later moves the ceiling for everyone who is exempt from billing
+ * without anyone remembering to update a second place.
+ */
+export function topPlan(): PlanDefinition {
+  return PLANS.reduce((best, p) => (p.position > best.position ? p : best), PLANS[0])
+}
+
+/**
+ * A superadmin's effective plan: the top tier, with every ceiling removed.
+ *
+ * Deliberately derived rather than a plan of its own. A "superadmin plan" row
+ * would be one more thing to forget to update when a tier is added, and the
+ * day it is forgotten is the day an owner silently cannot reach something.
+ */
+export function unlimitedFrom(plan: PlanDefinition): PlanDefinition {
+  return {
+    ...plan,
+    key: "superadmin",
+    name: `${plan.name} (unlimited)`,
+    blurb: "Everything the top plan includes, with no ceilings and no charge.",
+    priceCents: 0,
+    annualPriceCents: 0,
+    limits: {
+      monthlyApiCalls: null,
+      dailyApiCalls: null,
+      maxApps: null,
+      maxKeysPerApp: null,
+      rateLimitPerMinute: null,
+    },
+  }
+}
+
 /** Is this plan allowed to use this surface? The paywall, in one line. */
 export function planAllows(planKey: string, feature: string): boolean {
   return planByKey(planKey).features.includes(feature)
