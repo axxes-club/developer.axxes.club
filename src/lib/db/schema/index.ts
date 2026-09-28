@@ -57,8 +57,6 @@ export * from "./integrations"
 
 // Projects (Kanban)
 export * from "./projects"
-// Nexus knowledge base
-export * from "./nexus"
 
 // AXXES developer platform: plans, apps, keys, metering
 export * from "./platform"

@@ -7,9 +7,9 @@ import { OrgSwitcher } from "@/components/org-switcher"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireContext()
-  const items = [
-    ...(product.nav ?? []).map((n) => ({ href: n.href, label: n.label })),
-  ]
+  // Grouped in the sidebar the same way the config is ordered, so the page
+  // and the navigation cannot drift apart.
+  const items = product.sections.map((s) => ({ href: s.href, label: s.label }))
 
   return (
     <div className="lg:flex">
