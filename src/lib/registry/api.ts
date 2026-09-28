@@ -169,12 +169,53 @@ export const API_PRODUCTS: ApiProduct[] = [
   {
     key: "nexus",
     name: "Nexus",
-    summary: "The knowledge base.",
+    summary: "The knowledge base: spaces, pages, backlinks and versions.",
     url: "https://nexus.axxes.club",
-    surface: "none",
-    note: "Read access is coming. Nexus has its own in-product developer section today; it is not this API.",
-    baseUrl: null,
-    resources: [],
+    surface: "read-write",
+    note: "Docs, tokens and an AI import library live in the product; these are the endpoints a script uses.",
+    baseUrl: "https://nexus.axxes.club",
+    resources: [
+      {
+        key: "tokens",
+        label: "API tokens",
+        description: "Personal bearer credentials for scripts. A token inherits your organization's access and can never exceed it.",
+        operations: [
+          {
+            id: "nexus.tokens.list",
+            method: "GET",
+            path: "/api/developer/tokens",
+            summary: "List your live tokens.",
+            description:
+              "Never returns a secret — only a prefix, so a token is recognisable in a list without being usable. Revoked tokens are not here; they are kept as rows so the usage history survives.",
+            requires: "api.read",
+            response: {
+              tokens: [
+                { id: "…", name: "Nightly sync", prefix: "nxk_1a2b3c", scopes: ["read"], useCount: 41, lastUsedAt: "2026-09-28T09:12:00Z", expiresAt: "2026-12-27T00:00:00Z" },
+              ],
+            },
+            errors: [{ status: 401, code: "unauthorized", meaning: "No session. Tokens are managed from the signed-in UI, not over the API." }],
+          },
+        ],
+      },
+      {
+        key: "import",
+        label: "Import",
+        description: "Getting content in from elsewhere.",
+        operations: [
+          {
+            id: "nexus.import.prompts",
+            method: "GET",
+            path: "/dashboard/developer/import-prompts",
+            summary: "Prompts that return content in the shape Nexus accepts.",
+            description:
+              "Five prompts, each written for a specific model and job, each ending in the same JSON envelope. Point a model at a folder of notes, a repository or another tool's export and paste the result into the importer.",
+            requires: "prompts.library",
+            response: { prompts: [{ id: "onboard", title: "Turn a folder of notes into a space", bestFor: "Claude, ChatGPT with file access" }] },
+            errors: [],
+          },
+        ],
+      },
+    ],
   },
   {
     key: "krates",
