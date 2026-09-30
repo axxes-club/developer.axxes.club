@@ -20,18 +20,9 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
         items={items}
         logo={<Logo />}
         mark={<LogoMark />}
+        organization={<OrgSwitcher current={{ tenantId: ctx.tenant.id, name: ctx.tenant.name, slug: ctx.tenant.slug, role: ctx.role, isPrimary: false }} memberships={ctx.memberships} />}
         footer={
           <div className="space-y-3 text-xs">
-            <OrgSwitcher
-              current={{
-                tenantId: ctx.tenant.id,
-                name: ctx.tenant.name,
-                slug: ctx.tenant.slug,
-                role: ctx.role,
-                isPrimary: ctx.memberships.some((m) => m.isPrimary && m.tenantId === ctx.tenant.id),
-              }}
-              memberships={ctx.memberships}
-            />
             <p className="truncate text-muted">{ctx.user.email}</p>
             <div className="flex items-center justify-between">
               <a className="text-muted hover:text-text" href="https://handshake.axxes.club">← AXXES apps</a>
