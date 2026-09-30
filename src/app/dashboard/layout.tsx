@@ -1,3 +1,6 @@
+import type { Metadata } from "next"
+import { BrandScope } from "@/components/brand"
+import { getCustomerBrand } from "@/lib/white-label"
 import { requireContext } from "@/lib/context"
 import { Sidebar } from "@/components/sidebar"
 import { SignOut } from "@/components/sign-out"
@@ -5,7 +8,7 @@ import { Logo, LogoMark } from "@/components/logo"
 import { product } from "@/product.config"
 import { OrgSwitcher } from "@/components/org-switcher"
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireContext()
   // Grouped in the sidebar the same way the config is ordered, so the page
   // and the navigation cannot drift apart.
@@ -40,4 +43,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="min-w-0 flex-1">{children}</main>
     </div>
   )
+}
+
+/** White-label customers see their own brand; everyone else, standard AXXES. */
+export default async function BrandedLayout(props: Parameters<typeof DashboardLayout>[0]) {
+  const ctx = await requireContext()
+  const brand = ctx ? await getCustomerBrand(ctx.tenant.id) : null
+  return <BrandScope brand={brand}>{await DashboardLayout(props)}</BrandScope>
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const ctx = await requireContext()
+  const brand = ctx ? await getCustomerBrand(ctx.tenant.id) : null
+  return brand?.faviconUrl ? { icons: { icon: brand.faviconUrl } } : {}
 }
