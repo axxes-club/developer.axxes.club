@@ -8,4 +8,6 @@ export async function platformAccessAllowed(userId:string,organizationId?:string
  return createPlatformAccess({query:(sql,values)=>pool.query(sql,values)},'developer').allowed(userId,organizationId);
 }
 export async function requirePlatformAccess(userId:string,organizationId?:string){if(!await platformAccessAllowed(userId,organizationId))throw new Error('Platform access is denied.');}
-export const guardPlatformAuth=<T extends object>(base:T)=>wrapPlatformAuth(base,id=>platformAccessAllowed(id));
+
+export async function platformSessionAllowed(userId:string,sessionId?:string){if(!platformPolicyEnabled())return true;const pool=state.platformAccessPool??=new Pool({connectionString:process.env.DATABASE_URL,max:2,connectionTimeoutMillis:5000,statement_timeout:5000,idleTimeoutMillis:30000});return createPlatformAccess({query:(sql,values)=>pool.query(sql,values)},'developer').sessionAllowed(userId,sessionId);}
+export const guardPlatformAuth=<T extends object>(base:T)=>wrapPlatformAuth(base,(id,sessionId)=>platformSessionAllowed(id,sessionId));
