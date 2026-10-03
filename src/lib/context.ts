@@ -59,7 +59,9 @@ export const listMemberships = cache(async (userId: string): Promise<Membership[
     )
     .orderBy(desc(schema.tenantMemberships.isPrimary))
 
-  return rows
+  const eligible=[];
+  for(const row of rows)if(await platformAccessAllowed(userId,row.tenantId))eligible.push(row);
+  return eligible
     .map((r) => ({
       tenantId: r.tenantId,
       name: r.name,
