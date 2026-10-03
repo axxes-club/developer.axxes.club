@@ -1,3 +1,5 @@
+import {guardPlatformAuth,platformAccessAllowed} from '@/lib/platform-access';
+import {APIError} from 'better-auth/api';
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db, schema } from "@/lib/db"
@@ -15,7 +17,7 @@ const parentDomain = (cookieDomain || "axxes.club").replace(/^\./, "")
 // Central AXXES sign-in; when unset the app uses its own sign-in page
 export const HANDSHAKE_URL = process.env.HANDSHAKE_URL?.replace(/\/$/, "") || null
 
-export const auth = betterAuth({
+const baseAuth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [
@@ -26,5 +28,8 @@ export const auth = betterAuth({
   ],
   advanced: cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : undefined,
   database: drizzleAdapter(db, { provider: "pg", schema }),
+  databaseHooks: { session: { create: { before: async (session) => { if(!await platformAccessAllowed(session.userId)) throw new APIError('FORBIDDEN',{message:'Account access is suspended.'}); return {data:session}; } } } },
   emailAndPassword: { enabled: true },
 })
+
+export const auth = guardPlatformAuth(baseAuth);

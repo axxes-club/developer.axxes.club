@@ -1,3 +1,4 @@
+import {platformAccessAllowed} from '@/lib/platform-access';
 import "server-only"
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
 import { and, desc, eq, isNull } from "drizzle-orm"
@@ -141,6 +142,7 @@ export async function resolveToken(raw: string) {
   const secret = raw.slice(`${TOKEN_PREFIX}_`.length + ID_HEX_LENGTH + 1);
   if (!secretMatches(secret, row.hash)) return null;
 
+  if(!await platformAccessAllowed(row.userId, row.tenantId)) return null;
   return row
 }
 

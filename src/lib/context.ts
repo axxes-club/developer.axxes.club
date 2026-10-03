@@ -1,3 +1,4 @@
+import {platformAccessAllowed} from '@/lib/platform-access';
 import "server-only"
 import { cache } from "react"
 import { cookies, headers } from "next/headers"
@@ -89,6 +90,7 @@ export const getContext = cache(async (): Promise<AppContext | null> => {
     memberships.find((m) => m.isPrimary) ??
     memberships[0]
 
+  if(!await platformAccessAllowed(session.user.id, chosen.tenantId)) return null;
   return {
     userId: session.user.id,
     user: { name: session.user.name, email: session.user.email },
