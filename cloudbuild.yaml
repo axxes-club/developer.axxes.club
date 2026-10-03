@@ -30,6 +30,18 @@
       ]
     },
     {
+      "id": "platform-access-tests",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "run",
+        "--rm",
+        "ci-check:$BUILD_ID",
+        "sh",
+        "-ec",
+        "rm -f .env .env.*; node_modules/.bin/tsx --test tests/platform-access/*.test.ts"
+      ]
+    },
+    {
       "id": "runtime-image",
       "name": "gcr.io/cloud-builders/docker",
       "args": [

@@ -1,3 +1,4 @@
+import {platformAccessAllowed} from '@/lib/platform-access';
 import "server-only"
 import { cache } from "react"
 import { cookies, headers } from "next/headers"
@@ -58,7 +59,9 @@ export const listMemberships = cache(async (userId: string): Promise<Membership[
     )
     .orderBy(desc(schema.tenantMemberships.isPrimary))
 
-  return rows
+  const eligible=[];
+  for(const row of rows)if(await platformAccessAllowed(userId,row.tenantId))eligible.push(row);
+  return eligible
     .map((r) => ({
       tenantId: r.tenantId,
       name: r.name,
@@ -89,6 +92,7 @@ export const getContext = cache(async (): Promise<AppContext | null> => {
     memberships.find((m) => m.isPrimary) ??
     memberships[0]
 
+  if(!await platformAccessAllowed(session.user.id, chosen.tenantId)) return null;
   return {
     userId: session.user.id,
     user: { name: session.user.name, email: session.user.email },
