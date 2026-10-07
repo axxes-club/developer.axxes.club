@@ -1,6 +1,6 @@
 # AXXES Cloud: cloud platform design
 
-Status: concrete proposal for owner review. No new cloud service, resource or product launch is claimed.
+Status: approved by the owner on 2026-10-07 (“that works”). No new cloud service, resource or product launch is claimed.
 
 ## Intent and branding
 
