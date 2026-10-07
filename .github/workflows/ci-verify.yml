@@ -69,7 +69,7 @@
         },
         {
           "name": "Test Cloud ownership and sessions on Linux PostgreSQL",
-          "run": "npm run test:cloud && npm run test:cloud:db",
+          "run": "npm run test:cloud && node --test scripts/test-cloud-github-credentials.mjs && npm run test:cloud:db",
           "env": {
             "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
           }
