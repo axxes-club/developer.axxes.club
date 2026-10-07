@@ -1,4 +1,6 @@
 import "server-only"
+import { loadHostingPolicy } from "@/lib/deploy/exemptions"
+import type { HostingPolicy } from "@/lib/deploy/types"
 import { and, eq, sql } from "drizzle-orm"
 import { db, schema } from "@/lib/db"
 import {
@@ -29,6 +31,8 @@ export type Gate = {
    * limit is a real limit or an exempt one.
    */
   exempt: boolean
+  /** Explicit hosting grants; independent of the legacy API exemption. */
+  hostingFor: (projectId: string) => Promise<HostingPolicy>
   allowed: (feature: string) => boolean
   productAllowed: (product: string) => boolean
   limitFor: <K extends keyof PlanDefinition["limits"]>(k: K) => number | null
@@ -75,6 +79,7 @@ export async function gateFor(tenantId: string): Promise<Gate> {
   return {
     plan,
     exempt: hasSuperadmin,
+    hostingFor: (projectId) => loadHostingPolicy({ tenantId, projectId }),
     allowed: (feature) => hasSuperadmin || planAllows(plan.key, feature),
     productAllowed: (product) => hasSuperadmin || planAllowsProduct(plan.key, product),
     limitFor: (k) => (hasSuperadmin ? null : plan.limits[k]),

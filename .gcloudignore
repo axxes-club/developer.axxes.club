@@ -10,3 +10,6 @@ gha-creds-*.json
 .netlify
 coverage
 *.log
+
+# Local agent planning/review logs never belong in build sources.
+.superpowers/
