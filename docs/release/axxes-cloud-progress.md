@@ -16,7 +16,7 @@ Applied only owned Cloud migrations 001-control-plane, 002-account-controls and 
 
 Cloud Build d4a89403-238b-430c-9522-ef844240f8e1 succeeded, including image-layer secret scanning. Runtime image: us-west1-docker.pkg.dev/gravy-meta/ci-developer/cloud@sha256:2a6ce1a40a242666942de8d2b7ea98cd13eb490f54d833631e206413e572d5ac. This console image was built at fa9fcf9; later changes correct worker-only isolation checks, add the owned release-binding migration and repair the browser harness. The console runtime code is unchanged by those corrections.
 
-Cloud DNS already targets the atelier-sites load balancer at 34.107.128.192 with existing wildcard TLS. A dedicated console deployment and additive exact-host route are being prepared. Record final revision, routing and live probes in axxes-cloud-verification.md after they pass.
+Cloud DNS already targets the atelier-sites load balancer at 34.107.128.192 with existing wildcard TLS. The dedicated console and additive exact-host route are live; production health and sign-in entry probes pass. PR #8 merged, exact-main CI 37696633601 passed, and automatic Cloud release 37696860417 succeeded with dedicated cb-cloud/gh-cloud identities, ci-cloud images and its own source bucket. See axxes-cloud-verification.md for concrete release evidence.
 
 ## Remaining operational work
 
