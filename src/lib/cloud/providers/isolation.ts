@@ -19,9 +19,14 @@ export async function prepareAppInfrastructure(api:GcpApi,resourceId:string,tena
  let stored=await api({api:'storage',path:'storage/v1/b/'+bucket,method:'GET'})
  if(!stored)stored=await api({api:'storage',path:'storage/v1/b?project='+CUSTOMER_PROJECT,method:'POST',body:{name:bucket,location:CUSTOMER_REGION,labels:{'axxes-resource':resourceId,'axxes-tenant':tenantId},iamConfiguration:{uniformBucketLevelAccess:{enabled:true},publicAccessPrevention:'enforced'},softDeletePolicy:{retentionDurationSeconds:'0'},lifecycle:{rule:[{action:{type:'Delete'},condition:{age:1}}]}}})
  if(stored?.name!==bucket||stored?.labels?.['axxes-resource']!==resourceId||stored?.labels?.['axxes-tenant']!==tenantId)throw new CloudError('provider_binding_mismatch',409)
- const policy=await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam',method:'GET'})
+ const policy=await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam?optionsRequestedPolicyVersion=3',method:'GET'})
  const member='serviceAccount:'+email(buildId)
- await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam',method:'PUT',body:grant(grant(policy,'roles/storage.objectViewer',member),'roles/storage.objectCreator',member)})
+ const restricted=grant(policy,'roles/storage.objectViewer',member)
+ restricted.version=3
+ restricted.bindings=(restricted.bindings??[]).map(row=>row.role==='roles/storage.objectCreator'?{...row,members:row.members.filter(m=>m!==member)}:row).filter(row=>row.members.length)
+ restricted.bindings.push({role:'roles/storage.objectCreator',members:[member],condition:{title:'build-log-output-only',expression:"resource.name.startsWith('projects/_/buckets/"+bucket+"/objects/log-')"}})
+ await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam',method:'PUT',body:restricted})
+
  const repoPath='projects/'+CUSTOMER_PROJECT+'/locations/'+CUSTOMER_REGION+'/repositories/'+service
  let repo=await api({api:'artifact',path:repoPath,method:'GET'})
  if(!repo){await api({api:'artifact',path:'projects/'+CUSTOMER_PROJECT+'/locations/'+CUSTOMER_REGION+'/repositories?repositoryId='+service,method:'POST',body:{format:'DOCKER',labels:{'axxes-resource':resourceId,'axxes-tenant':tenantId},description:marker}});repo=await api({api:'artifact',path:repoPath,method:'GET'})}

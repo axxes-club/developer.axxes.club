@@ -23,6 +23,8 @@ test('resource infrastructure grants build credentials access only to its own so
  const storage=policies.find(r=>r.api==='storage')!
  assert.ok(storage.path.includes('axxes-source-11111111111141118111111111111111'))
  assert.ok(JSON.stringify(storage.body).includes('build-1111111111114111811111@'))
+ const creator=(storage.body as any).bindings.find((b:any)=>b.role==='roles/storage.objectCreator')
+ assert.ok(creator.condition.expression.includes('/objects/log-'),'build identity may create log objects but cannot replace source archives')
 })
 test('existing foreign infrastructure is rejected before IAM can be modified',async()=>{
  const requests:GcpRequest[]=[]

@@ -19,7 +19,7 @@ COPY --from=build --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
 USER nginx
 EXPOSE 8080
 `
- return {...base,dockerfile:input.runtime==='static'?staticDockerfile:base.dockerfile,build:{...base.build,tags:['axxes-job-'+input.jobId]}}
+ return {...base,dockerfile:input.runtime==='static'?staticDockerfile:base.dockerfile,build:{...base.build,logsBucket:'gs://'+sourceBucket,options:{logging:'GCS_ONLY'},tags:['axxes-job-'+input.jobId]}}
 }
 export function buildResult(build:any,imageName:string):{state:'pending'|'failed'|'succeeded';image?:string;errorCode?:string}{
  if(['PENDING','QUEUED','WORKING'].includes(build?.status))return {state:'pending'}
