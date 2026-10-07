@@ -11,8 +11,8 @@ export async function readJson(request:Request,limit=65536){
  const declared=request.headers.get('content-length');if(declared!==null&&(!/^\d+$/.test(declared)||BigInt(declared)>BigInt(limit)))throw new CloudError('body_too_large',413)
  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readBytes(request.body,limit)))}catch(error){if(error instanceof CloudError)throw error;throw new CloudError('invalid_json')}
 }
-export function cloudHandler(resolve:()=>Promise<CloudContext|null>,run:(ctx:CloudContext,input:unknown,request:Request)=>Promise<unknown>){return async(request:Request)=>{
- try{const ctx=await resolve();if(!ctx)throw new CloudError('unauthorized',401)
+export function cloudHandler(resolve:(request:Request)=>Promise<CloudContext|null>,run:(ctx:CloudContext,input:unknown,request:Request)=>Promise<unknown>){return async(request:Request)=>{
+ try{const ctx=await resolve(request);if(!ctx)throw new CloudError('unauthorized',401)
  const mutation=request.method!=='GET';if(mutation){const origin=process.env.CLOUD_ORIGIN??'https://cloud.axxes.app';if(!CLOUD_ORIGINS.includes(origin as typeof CLOUD_ORIGINS[number])||request.headers.get('origin')!==origin)throw new CloudError('same_origin_required',403)}
  const result=await run(ctx,mutation?await readJson(request):undefined,request);return Response.json(result,{headers:{'cache-control':'no-store'}})
  }catch(error){const status=error instanceof CloudError?error.status:error instanceof ZodError?400:503;const code=error instanceof CloudError?error.code:error instanceof ZodError?'invalid_request':'temporarily_unavailable';return Response.json({error:code},{status,headers:{'cache-control':'no-store'}})}
