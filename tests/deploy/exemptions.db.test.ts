@@ -44,17 +44,22 @@ for (const beneficiary of ["jose", "bayamon", "otto"])
         ).exempt,
         false,
       )
-      await pool.query(
-        `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,'2026-10-15','verified-admin','prospective revocation')`,
+      const revoked = await pool.query(
+        `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,now(),'verified-admin','prospective revocation') RETURNING ends_at`,
         [grantA, tenantA],
       )
       assert.equal(
-        (await loadHostingPolicy(subjectA, new Date("2026-10-14"), pool))
-          .exempt,
+        (
+          await loadHostingPolicy(
+            subjectA,
+            new Date(revoked.rows[0].ends_at.getTime() - 1),
+            pool,
+          )
+        ).exempt,
         true,
       )
       assert.equal(
-        (await loadHostingPolicy(subjectA, new Date("2026-10-15"), pool))
+        (await loadHostingPolicy(subjectA, revoked.rows[0].ends_at, pool))
           .exempt,
         false,
       )

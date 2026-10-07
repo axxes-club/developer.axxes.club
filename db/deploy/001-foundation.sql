@@ -31,6 +31,16 @@ BEGIN
  IF NEW.ends_at < (SELECT starts_at FROM deploy_exemption_grants WHERE id=NEW.grant_id AND tenant_id=NEW.tenant_id) THEN
    RAISE EXCEPTION 'Revocation precedes grant';
  END IF;
+ IF NEW.ends_at < transaction_timestamp() THEN
+   RAISE EXCEPTION 'Revocation must be prospective';
+ END IF;
+ -- Long-lived transactions cannot move effective time behind the issuing statement.
+ NEW.issued_at := statement_timestamp();
+ NEW.ends_at := greatest(NEW.ends_at, NEW.issued_at);
+ -- Node timestamps have millisecond precision. Round up, never expire a grant early.
+ NEW.ends_at := date_trunc('milliseconds', NEW.ends_at) +
+   CASE WHEN NEW.ends_at > date_trunc('milliseconds', NEW.ends_at)
+     THEN interval '1 millisecond' ELSE interval '0' END;
  RETURN NEW;
 END;
 $$;
@@ -71,9 +81,9 @@ CREATE TABLE IF NOT EXISTS deploy_budget_reservations (
  amount_micro_usd bigint NOT NULL CHECK(amount_micro_usd>=0), exemption_grant_id uuid,
  state text NOT NULL DEFAULT 'reserved' CHECK(state IN ('reserved','settled','cancelled')),
  actual_micro_usd bigint, charged_micro_usd bigint, created_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz,
- UNIQUE(tenant_id,project_id,operation_id), FOREIGN KEY(tenant_id,project_id) REFERENCES deploy_projects(tenant_id,id),
+ UNIQUE(tenant_id,project_id,operation_id), UNIQUE(tenant_id,project_id,id), FOREIGN KEY(tenant_id,project_id) REFERENCES deploy_projects(tenant_id,id),
  FOREIGN KEY(tenant_id,exemption_grant_id) REFERENCES deploy_exemption_grants(tenant_id,id),
- CHECK(actual_micro_usd IS NULL OR (actual_micro_usd>=0 AND actual_micro_usd<=amount_micro_usd)),
+ CHECK(actual_micro_usd IS NULL OR (actual_micro_usd>=0 AND (actual_micro_usd<=amount_micro_usd OR exemption_grant_id IS NOT NULL))),
  CHECK(charged_micro_usd IS NULL OR (charged_micro_usd>=0 AND charged_micro_usd<=amount_micro_usd)),
  CHECK(state='reserved' OR (actual_micro_usd IS NOT NULL AND charged_micro_usd IS NOT NULL AND finished_at IS NOT NULL))
 );
@@ -81,5 +91,13 @@ DROP TRIGGER IF EXISTS deploy_usage_immutable ON deploy_usage_entries;
 CREATE TRIGGER deploy_usage_immutable BEFORE UPDATE OR DELETE ON deploy_usage_entries FOR EACH ROW EXECUTE FUNCTION deploy_deny_change();
 DROP TRIGGER IF EXISTS deploy_adjustment_immutable ON deploy_billing_adjustments;
 CREATE TRIGGER deploy_adjustment_immutable BEFORE UPDATE OR DELETE ON deploy_billing_adjustments FOR EACH ROW EXECUTE FUNCTION deploy_deny_change();
+CREATE TABLE IF NOT EXISTS deploy_budget_incidents (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL, project_id uuid NOT NULL, reservation_id uuid NOT NULL,
+ kind text NOT NULL CHECK(kind='reservation_exceeded'), actual_micro_usd bigint NOT NULL CHECK(actual_micro_usd>=0),
+ created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(tenant_id,project_id,reservation_id,kind),
+ FOREIGN KEY(tenant_id,project_id,reservation_id) REFERENCES deploy_budget_reservations(tenant_id,project_id,id)
+);
+DROP TRIGGER IF EXISTS deploy_incident_immutable ON deploy_budget_incidents;
+CREATE TRIGGER deploy_incident_immutable BEFORE UPDATE OR DELETE ON deploy_budget_incidents FOR EACH ROW EXECUTE FUNCTION deploy_deny_change();
 INSERT INTO deploy_schema_migrations(version) VALUES('001-foundation') ON CONFLICT DO NOTHING;
 COMMIT;

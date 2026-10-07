@@ -70,19 +70,23 @@ test("exemption and immutable price snapshots preserve historical zero charges a
     await rate(pool)
     await grant(pool)
     const first = await appendUsage(event, pool)
-    await pool.query(
-      `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,'2026-10-03','admin','fixture')`,
+    const revoked = await pool.query(
+      `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,now(),'admin','fixture') RETURNING ends_at`,
       [grantA, tenantA],
     )
     await appendUsage(
-      { ...event, sourceId: "later", occurredAt: new Date("2026-10-04") },
+      {
+        ...event,
+        sourceId: "later",
+        occurredAt: new Date(revoked.rows[0].ends_at.getTime() + 1),
+      },
       pool,
     )
     assert.equal((await appendUsage(event, pool)).id, first.id)
     const summary = await summarizeHostingUsage(
       subjectA,
       new Date("2026-10-01"),
-      new Date("2026-11-01"),
+      new Date(revoked.rows[0].ends_at.getTime() + 60000),
       pool,
     )
     assert.equal(summary.chargedMicroUsd, 3000000n)

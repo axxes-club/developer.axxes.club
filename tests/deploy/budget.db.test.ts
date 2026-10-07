@@ -136,10 +136,10 @@ test("exempt operations need no balance and remain zero-charge after revocation"
       operationId: "free",
       amountMicroUsd: 2000000n,
     }
-    const result = await reserveBudget(input, pool, new Date("2026-10-10"))
+    const result = await reserveBudget(input, pool, new Date("2026-10-02"))
     assert.equal(result.status, "exempt")
-    await pool.query(
-      `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,'2026-10-15','admin','fixture')`,
+    const revoked = await pool.query(
+      `INSERT INTO deploy_exemption_revocations(grant_id,tenant_id,ends_at,issued_by,reason) VALUES($1,$2,now(),'admin','fixture') RETURNING ends_at`,
       [grantA, tenantA],
     )
     await settleReservation(
@@ -164,7 +164,7 @@ test("exempt operations need no balance and remain zero-charge after revocation"
         await reserveBudget(
           { ...input, operationId: "paid" },
           pool,
-          new Date("2026-10-16"),
+          new Date(revoked.rows[0].ends_at.getTime() + 1),
         )
       ).status,
       "insufficient",

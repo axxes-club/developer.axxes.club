@@ -7,6 +7,7 @@ export type ReservationResult = {
   reservationId: string | null
   status: "reserved" | "exempt" | "insufficient"
 }
+/** Amounts reserve customer-facing retail charges, not raw provider expenses. */
 export async function reserveBudget(
   input: {
     subject: HostingSubject
@@ -91,25 +92,35 @@ async function refund(
   )
   if (!result.rowCount) throw new Error("Billing account not found")
 }
+/** Settle the accepted retail usage amount; provider cost reconciliation is separate. */
 export async function settleReservation(
   input: ReservationSubject & { actualMicroUsd: bigint },
   pool: Pool = hostingPool(),
 ): Promise<void> {
   validateMoney(input.actualMicroUsd)
-  await inHostingTransaction(pool, async (client) => {
+  const overrun = await inHostingTransaction(pool, async (client) => {
     const row = await lockedReservation(client, input)
     if (row.state === "settled") {
       if (BigInt(row.actual) !== input.actualMicroUsd)
         throw new Error("Settlement conflict")
-      return
+      return false
     }
     if (row.state === "cancelled")
       throw new Error("Reservation already cancelled")
     const amount = BigInt(row.amount)
-    if (input.actualMicroUsd > amount)
-      throw new Error(
-        "Actual cost exceeds reservation; operation requires reconciliation",
+    if (input.actualMicroUsd > amount) {
+      await client.query(
+        `INSERT INTO deploy_budget_incidents(tenant_id,project_id,reservation_id,kind,actual_micro_usd)
+         VALUES($1,$2,$3,'reservation_exceeded',$4) ON CONFLICT(tenant_id,project_id,reservation_id,kind) DO NOTHING`,
+        [
+          input.subject.tenantId,
+          input.subject.projectId,
+          input.reservationId,
+          input.actualMicroUsd.toString(),
+        ],
       )
+      if (!row.exemption_grant_id) return true
+    }
     const charged = row.exemption_grant_id ? 0n : input.actualMicroUsd
     if (!row.exemption_grant_id)
       await refund(client, input.subject.tenantId, amount - charged)
@@ -121,7 +132,13 @@ export async function settleReservation(
         charged.toString(),
       ],
     )
+    return false
   })
+  // Report after commit: the durable incident must survive the failure response.
+  if (overrun)
+    throw new Error(
+      "Actual cost exceeds reservation; operation requires reconciliation",
+    )
 }
 export async function cancelReservation(
   input: ReservationSubject,

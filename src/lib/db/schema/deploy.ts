@@ -181,6 +181,7 @@ export const deployBudgetReservations = pgTable(
   },
   (t) => [
     unique().on(t.tenantId, t.projectId, t.operationId),
+    unique().on(t.tenantId, t.projectId, t.id),
     foreignKey({
       columns: [t.tenantId, t.projectId],
       foreignColumns: [deployProjects.tenantId, deployProjects.id],
@@ -190,6 +191,30 @@ export const deployBudgetReservations = pgTable(
       foreignColumns: [
         deployExemptionGrants.tenantId,
         deployExemptionGrants.id,
+      ],
+    }),
+  ],
+)
+
+export const deployBudgetIncidents = pgTable(
+  "deploy_budget_incidents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull(),
+    projectId: uuid("project_id").notNull(),
+    reservationId: uuid("reservation_id").notNull(),
+    kind: text("kind").notNull(),
+    actualMicroUsd: bigint("actual_micro_usd", { mode: "bigint" }).notNull(),
+    createdAt: time("created_at"),
+  },
+  (t) => [
+    unique().on(t.tenantId, t.projectId, t.reservationId, t.kind),
+    foreignKey({
+      columns: [t.tenantId, t.projectId, t.reservationId],
+      foreignColumns: [
+        deployBudgetReservations.tenantId,
+        deployBudgetReservations.projectId,
+        deployBudgetReservations.id,
       ],
     }),
   ],

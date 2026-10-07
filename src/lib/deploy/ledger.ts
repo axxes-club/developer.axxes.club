@@ -235,6 +235,9 @@ export async function summarizeHostingUsage(
   )
     throw new Error("Invalid usage window")
   return inHostingTransaction(pool, async (client) => {
+    await client.query(
+      "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+    )
     await loadHostingPolicy(subject, to, client)
     const { rows } = await client.query(
       "SELECT unit,quantity::text,price_numerator::text,price_denominator::text,exemption_grant_id FROM deploy_usage_entries WHERE tenant_id=$1 AND project_id=$2 AND occurred_at>=$3 AND occurred_at<$4",
