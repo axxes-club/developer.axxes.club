@@ -86,7 +86,7 @@ Files: `src/lib/cloud/jobs.ts`, `src/lib/cloud/providers/{types,gcp}.ts`, `src/l
 - [ ] `claimJob(workerId, leaseSeconds=60)` uses FOR UPDATE SKIP LOCKED and returns a fenced lease token; heartbeat and completion compare that token/generation. Revoked/suspended actors are rejected before dispatch.
 - [ ] Provider methods `create/read/update/delete/poll/reconcile` take immutable tenant binding and server-controlled configuration. Allow only axxes-customer-hosting destinations; no shell invocation containing customer commands or arbitrary endpoint URLs.
 - [ ] Persist stable provider request identity before dispatch; ambiguous outcome enters reconciling. Verify existing resources before retrying creation. Pending provider work never becomes succeeded on submission alone.
-- [ ] Worker runs as a separate private service with a narrow provider service account; browser routes cannot invoke unrestricted provider admin APIs. Commit after DB/provider tests.
+- [ ] Worker runs as a separate private service with a narrow provider service account; browser routes cannot invoke unrestricted provider admin APIs. Build a standalone Node 24 worker bundle with explicit production dependencies; do not assume Next alias resolution or dev-only tsx exists in the runtime image. Commit after DB/provider tests.
 
 ## Task 6 — Verified GitHub connection and safe source intake
 
@@ -150,3 +150,7 @@ Files: `cloudbuild-cloud.yaml`, `cloudbuild-cloud-worker.yaml`, `.github/workflo
 - [ ] Request one independent whole-branch code review under requesting-code-review; resolve all Critical/Important findings. Merge/deploy within the owner's authorized cloud work after required checks pass.
 - [ ] Run a disposable real end-to-end app lifecycle and two-tenant authorization probes; verify billing/setup gates and all visible routes. Record actual revision/digest, enabled capability matrix, unresolved external configuration, costs and cleanup.
 - [ ] Update AXXES canonical knowledge/product visibility only for capabilities actually verified. Report what is running without claiming full DigitalOcean parity.
+
+## Plan self-review
+
+Checked against the approved spec: identity/domain routing (3/11), owned tenant model (1/2), quote/financial admission and owner exclusivity (4/9), fenced jobs/provider reconciliation (5), verified source/build lifecycle (6/7), domains/secrets/metering (8), actual customer flows (10), and deployment/review/evidence (11). The five listed failure classes have explicit tests in tasks 3–9. No broad shared schema migration, automatic free infrastructure expansion or unimplemented product claim is included. Later service milestones remain separately scoped; completing this plan delivers verified app-hosting capability rather than asserting full parity.
