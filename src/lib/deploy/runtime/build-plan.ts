@@ -6,6 +6,7 @@ const schema=z.object({
  buildServiceAccount:z.string().regex(/^[a-z][a-z0-9-]{5,29}@axxes-customer-hosting\.iam\.gserviceaccount\.com$/),
  image:z.string().regex(/^us-west1-docker\.pkg\.dev\/axxes-customer-hosting\/[a-z][a-z0-9-]{0,62}\/app:[a-z0-9][a-z0-9-]{0,62}$/),
  sourceBucket:z.string().regex(/^axxes-source-[a-z0-9-]{1,45}$/),
+ sourceGeneration:z.string().regex(/^[1-9][0-9]{0,18}$/).refine(value=>BigInt(value)<=9223372036854775807n),
  sourceObject:z.string().regex(/^source\/[a-z0-9-]{1,80}\.tar\.gz$/),
 }).strict()
 /** Trusted worker constructs the source archive: source/ contains checked repository
@@ -32,7 +33,7 @@ CMD ["node", "server.js"]
 `
  return {dockerfile,dockerignore:'**\n!source/\n!source/**\n!AXXES.Dockerfile\n',build:{
   serviceAccount:'projects/axxes-customer-hosting/serviceAccounts/'+input.buildServiceAccount,
-  source:{storageSource:{bucket:input.sourceBucket,object:input.sourceObject}},
+  source:{storageSource:{bucket:input.sourceBucket,object:input.sourceObject,generation:input.sourceGeneration}},
   steps:[{name:input.builderImage,args:['build','--no-cache','-f','AXXES.Dockerfile','-t',input.image,'.']}],
   images:[input.image],timeout:'600s',options:{logging:'CLOUD_LOGGING_ONLY'},
  }}
