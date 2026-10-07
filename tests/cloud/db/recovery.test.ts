@@ -39,3 +39,14 @@ test('reconciled provider work can publish through the same live generation fenc
  const published=await withPublicationFence(j,async()=>({revision:'verified-owned-revision'}),pool)
  assert.equal(published.revision,'verified-owned-revision')
 }))
+test('provider checkpoints persist across leases and stale workers cannot overwrite them',async()=>withDeployDatabase(async pool=>{
+ const {checkpointJob}=await import('../../../src/lib/cloud/jobs')
+ const r=await fixture(pool)
+ await pool.query("INSERT INTO cloud_jobs(tenant_id,resource_id,generation,actor_id,operation,idempotency_key,input_hash,desired,quote) VALUES($1,$2,1,$3,'deploy','checkpoint',$4,'{}','{}')",[tenantA,r.id,freeOwnerId,'c'.repeat(64)])
+ const j=(await claimJob(pool))!
+ await checkpointJob(j,{phase:'build',buildId:'verified-build'},pool)
+ await pool.query("UPDATE cloud_jobs SET lease_until=statement_timestamp()-interval '1 second' WHERE id=$1",[j.id])
+ const replacement=(await claimJob(pool))!
+ assert.deepEqual(replacement.provider_result,{phase:'build',buildId:'verified-build'})
+ await assert.rejects(checkpointJob(j,{phase:'foreign'},pool),/job_lease_lost/)
+}))

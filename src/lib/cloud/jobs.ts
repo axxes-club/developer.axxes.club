@@ -34,3 +34,4 @@ export async function completeJob(job:ClaimedJob,state:'succeeded'|'failed'|'rec
 export async function cancelJob(ctx:CloudContext,id:string,connection:Pool|PoolClient=hostingPool()){
  requireCloudRole(ctx,'operate');const row=await connection.query("UPDATE cloud_jobs SET state='cancel_requested',updated_at=statement_timestamp() WHERE tenant_id=$1 AND id=$2 AND state IN('queued','running','reconciling') RETURNING id,state",[ctx.tenant.id,id]);if(!row.rowCount)throw new CloudError('job_not_cancelable',409);return row.rows[0]
 }
+export async function checkpointJob(..._args:any[]):Promise<void>{throw Error('not_implemented')}
