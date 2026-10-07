@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:deploy": "tsx --test tests/deploy/policy.test.ts tests/deploy/pricing.test.ts tests/deploy/inspect.test.ts tests/deploy/inspect-route.test.ts",
-    "test:deploy:db": "tsx --test tests/deploy/baseline.test.ts tests/deploy/exemptions.db.test.ts tests/deploy/ledger.db.test.ts tests/deploy/budget.db.test.ts tests/deploy/review.db.test.ts"
+    "test:deploy": "tsx --test tests/deploy/policy.test.ts tests/deploy/pricing.test.ts tests/deploy/inspect.test.ts tests/deploy/inspect-route.test.ts tests/deploy/github.test.ts tests/deploy/github-access.test.ts tests/deploy/build-plan.test.ts",
+    "test:deploy:db": "tsx --test tests/deploy/baseline.test.ts tests/deploy/exemptions.db.test.ts tests/deploy/ledger.db.test.ts tests/deploy/budget.db.test.ts tests/deploy/review.db.test.ts tests/deploy/intake.db.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
