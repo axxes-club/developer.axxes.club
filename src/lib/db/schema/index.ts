@@ -60,3 +60,6 @@ export * from "./projects"
 
 // AXXES developer platform: plans, apps, keys, metering
 export * from "./platform"
+
+// Customer hosting financial foundation
+export * from "./deploy"
