@@ -18,8 +18,12 @@ export async function stageApp(api:GcpApi,binding:AppBinding,image:string,genera
  const prior=await api({api:'run',path:path(b),method:'GET'});if(prior)verifyAppOwnership(b,prior)
  // A first service is IAM-private; its initial revision cannot receive public requests.
  // Subsequent revisions retain existing traffic by explicitly targeting owned revisions.
- const traffic=prior?(prior.trafficStatuses??[]).filter((t:any)=>t.percent>0).map((t:any)=>({type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision:t.revision,percent:t.percent})):[]
- if(prior&&traffic.some((t:any)=>typeof t.revision!=='string'||!t.revision.startsWith(b.service+'-')))throw new CloudError('provider_binding_mismatch')
+ if(prior&&(prior.reconciling===true||prior.terminalCondition?.state!=='CONDITION_SUCCEEDED'||!Array.isArray(prior.trafficStatuses)||!prior.trafficStatuses.length))throw new CloudError('app_not_ready',409)
+ const traffic=prior?prior.trafficStatuses.map((t:any)=>{
+  if(typeof t.revision!=='string'||!new RegExp('^'+b.service+'-g[1-9][0-9]*$').test(t.revision)||!Number.isInteger(t.percent)||t.percent<0||t.percent>100||t.tag!==undefined&&!/^[a-z][a-z0-9-]{0,62}$/.test(t.tag))throw new CloudError('provider_binding_mismatch')
+  return {type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision:t.revision,percent:t.percent,...(t.tag?{tag:t.tag}:{})}
+ }):[]
+ if(prior&&traffic.reduce((sum:number,t:any)=>sum+t.percent,0)!==100)throw new CloudError('app_not_ready',409)
  const body={name:path(b),labels:labels(b),ingress:'INGRESS_TRAFFIC_ALL',template:{revision:b.service+'-g'+generation,labels:{...labels(b),'axxes-generation':String(generation)},serviceAccount:b.runtimeAccount,scaling:{minInstanceCount:0,maxInstanceCount:1},maxInstanceRequestConcurrency:10,timeout:'30s',containers:[{image,ports:[{containerPort:8080}],resources:{limits:{cpu:'1',memory:'512Mi'},cpuIdle:true},startupProbe:{tcpSocket:{port:8080},periodSeconds:5,failureThreshold:24}}]},traffic}
  return api({api:'run',path:prior?path(b)+'?updateMask=template,traffic,labels':'projects/'+b.project+'/locations/'+b.region+'/services?serviceId='+b.service,method:prior?'PATCH':'POST',body})
 }
@@ -31,4 +35,11 @@ export function operationResult(value:any):{state:'pending'|'failed'|'succeeded'
 }
 export function readyApp(binding:AppBinding,service:any){verifyAppOwnership(binding,service);if(service.reconciling===true||service.terminalCondition?.state!=='CONDITION_SUCCEEDED'||typeof service.uri!=='string'||!/^https:\/\/[a-z0-9.-]+\.run\.app$/.test(service.uri))throw new CloudError('app_not_ready',409);return {uri:service.uri,revision:service.latestReadyRevision}}
 export async function deleteApp(api:GcpApi,binding:AppBinding){const b=appBinding(binding);const service=await api({api:'run',path:path(b),method:'GET'});if(!service)return {name:path(b),done:true,response:{absent:true}};verifyAppOwnership(b,service);return api({api:'run',path:path(b),method:'DELETE'})}
-export async function promoteApp(api:GcpApi,binding:AppBinding,revision:string){const b=appBinding(binding);if(!new RegExp('^'+b.service+'-g[1-9][0-9]*$').test(revision))throw new CloudError('revision_binding_mismatch');const service=await api({api:'run',path:path(b),method:'GET'});verifyAppOwnership(b,service);const owned=await api({api:'run',path:path(b)+'/revisions/'+revision,method:'GET'});if(!owned||owned.service!==path(b)||owned.labels?.['axxes-resource']!==b.resourceId||owned.labels?.['axxes-tenant']!==b.tenantId||owned.conditions?.some((c:any)=>c.type==='Ready'&&c.state!=='CONDITION_SUCCEEDED'))throw new CloudError('revision_not_ready',409);return api({api:'run',path:path(b)+'?updateMask=traffic',method:'PATCH',body:{name:path(b),traffic:[{type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision,percent:100}]}})}
+export async function promoteApp(api:GcpApi,binding:AppBinding,revision:string,expectedImage:string){
+ const b=appBinding(binding);ownedDigest(b,expectedImage)
+ if(!new RegExp('^'+b.service+'-g[1-9][0-9]*$').test(revision))throw new CloudError('revision_binding_mismatch')
+ const service=await api({api:'run',path:path(b),method:'GET'});verifyAppOwnership(b,service)
+ const owned=await api({api:'run',path:path(b)+'/revisions/'+revision,method:'GET'})
+ if(!owned||owned.name!==path(b)+'/revisions/'+revision||owned.service!==path(b)||owned.labels?.['axxes-resource']!==b.resourceId||owned.labels?.['axxes-tenant']!==b.tenantId||owned.reconciling===true||owned.serviceAccount!==b.runtimeAccount||owned.containers?.length!==1||owned.containers[0].image!==expectedImage||!owned.conditions?.some((c:any)=>c.type==='Ready'&&c.state==='CONDITION_SUCCEEDED'))throw new CloudError('revision_not_ready',409)
+ return api({api:'run',path:path(b)+'?updateMask=traffic',method:'PATCH',body:{name:path(b),traffic:[{type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision,percent:100}]}})
+}

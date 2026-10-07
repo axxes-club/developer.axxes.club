@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import {CloudError} from '../../src/lib/cloud/types'
 import {processClaimedJob} from '../../src/lib/cloud/worker'
 const job:any={id:'job',operation:'deploy',provider_request_id:null,state:'running',quote:{exempt:true},desired:{commitSha:'a'.repeat(40)}}
 test('a worker dispatches only after actor validation and durable dispatch identity',async()=>{
@@ -19,6 +20,16 @@ test('cancellation before dispatch performs no provider operation',async()=>{
 })
 test('revoked actors cannot begin new provider spending',async()=>{
  let dispatch=false;let outcome=''
- await processClaimedJob(job,{validate:async()=>{throw Error('job_actor_revoked')},mark:async()=>{dispatch=true},execute:async()=>{dispatch=true;return {state:'succeeded'}},finish:async(state)=>{outcome=state},heartbeat:async()=>{}})
+ await processClaimedJob(job,{validate:async()=>{throw new CloudError('job_actor_revoked',403)},mark:async()=>{dispatch=true},execute:async()=>{dispatch=true;return {state:'succeeded'}},finish:async(state)=>{outcome=state},heartbeat:async()=>{}})
  assert.equal(dispatch,false);assert.equal(outcome,'failed')
+})
+test('transient authority-check failure preserves dispatched work without selecting cleanup',async()=>{
+ let executed=false;let state='',checkpoint:unknown=null
+ await processClaimedJob({...job,provider_request_id:'job',state:'reconciling'},{validate:async()=>{throw Error('database unavailable')},mark:async()=>{},execute:async()=>{executed=true;return {state:'succeeded'}},finish:async(s,c)=>{state=s;checkpoint=c},heartbeat:async()=>{}})
+ assert.equal(executed,false);assert.equal(state,'reconciling');assert.equal(checkpoint,undefined)
+})
+test('an omitted adapter checkpoint preserves the last durable provider receipt',async()=>{
+ let checkpoint:unknown=null
+ await processClaimedJob({...job,provider_request_id:'job',state:'reconciling'},{validate:async()=>{},mark:async()=>{},execute:async()=>({state:'pending'}),finish:async(_s,c)=>{checkpoint=c},heartbeat:async()=>{}})
+ assert.equal(checkpoint,undefined)
 })

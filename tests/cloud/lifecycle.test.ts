@@ -33,3 +33,26 @@ test('deletion first verifies the immutable resource binding and reports pending
  const foreign=async()=>({...service,labels:{'axxes-resource':resourceId,'axxes-tenant':'foreign'}})
  await assert.rejects(lifecycle.deleteApp(foreign,binding),/binding/)
 })
+test('publication fails closed without positive revision readiness and exact runtime identity',async()=>{
+ const service={name:'projects/axxes-customer-hosting/locations/us-west1/services/'+binding.service,labels:{'axxes-resource':resourceId,'axxes-tenant':binding.tenantId}}
+ const revision=binding.service+'-g2'
+ for(const invalid of [{conditions:[]},{reconciling:true,conditions:[{type:'Ready',state:'CONDITION_SUCCEEDED'}]},{serviceAccount:'foreign',conditions:[{type:'Ready',state:'CONDITION_SUCCEEDED'}]}]){
+  const api=async(r:GcpRequest)=>r.path.includes('/revisions/')?{service:service.name,labels:service.labels,containers:[{image:digest}],serviceAccount:binding.runtimeAccount,...invalid}:service
+  await assert.rejects(lifecycle.promoteApp(api,binding,revision,digest),/revision_not_ready/)
+ }
+})
+test('staging an existing app rejects unresolved provider traffic rather than resetting it',async()=>{
+ const service={name:'projects/axxes-customer-hosting/locations/us-west1/services/'+binding.service,labels:{'axxes-resource':resourceId,'axxes-tenant':binding.tenantId},reconciling:true}
+ await assert.rejects(lifecycle.stageApp(async()=>service,binding,digest,2),/app_not_ready/)
+})
+test('a verified owned revision receives all traffic and staging preserves existing tagged traffic',async()=>{
+ const servicePath='projects/axxes-customer-hosting/locations/us-west1/services/'+binding.service
+ const service={name:servicePath,labels:{'axxes-resource':resourceId,'axxes-tenant':binding.tenantId},reconciling:false,terminalCondition:{state:'CONDITION_SUCCEEDED'},trafficStatuses:[{revision:binding.service+'-g1',percent:100,tag:'stable'}]}
+ const revision={name:servicePath+'/revisions/'+binding.service+'-g2',service:servicePath,labels:service.labels,containers:[{image:digest}],serviceAccount:binding.runtimeAccount,conditions:[{type:'Ready',state:'CONDITION_SUCCEEDED'}]}
+ const mutations:GcpRequest[]=[]
+ const api=async(r:GcpRequest)=>{if(r.method==='PATCH'){mutations.push(r);return {name:'op',done:false}};return r.path.includes('/revisions/')?revision:service}
+ await lifecycle.stageApp(api,binding,digest,2)
+ assert.deepEqual((mutations[0].body as any).traffic,[{type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision:binding.service+'-g1',percent:100,tag:'stable'}])
+ await lifecycle.promoteApp(api,binding,binding.service+'-g2',digest)
+ assert.deepEqual((mutations[1].body as any).traffic,[{type:'TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION',revision:binding.service+'-g2',percent:100}])
+})
