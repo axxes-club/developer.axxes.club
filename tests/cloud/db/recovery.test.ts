@@ -32,3 +32,10 @@ test('a recovered cleanup job is independent of funding and capability setup',as
  assert.equal(row.operation,'delete')
  assert.equal((await pool.query('SELECT count(*) FROM deploy_budget_reservations')).rows[0].count,'0')
 }))
+test('reconciled provider work can publish through the same live generation fence',async()=>withDeployDatabase(async pool=>{
+ const r=await fixture(pool)
+ await pool.query("INSERT INTO cloud_jobs(tenant_id,resource_id,generation,actor_id,operation,idempotency_key,input_hash,desired,quote,state,provider_request_id) VALUES($1,$2,1,$3,'deploy','reconciled',$4,'{}',$5,'reconciling','provider-request')",[tenantA,r.id,freeOwnerId,'b'.repeat(64),JSON.stringify({exempt:false})])
+ const j=(await claimJob(pool))!
+ const published=await withPublicationFence(j,async()=>({revision:'verified-owned-revision'}),pool)
+ assert.equal(published.revision,'verified-owned-revision')
+}))
