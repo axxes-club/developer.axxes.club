@@ -4,6 +4,8 @@ import type { Pool } from "pg"
 import { withDeployDatabase } from "./helpers/postgres"
 import {
   applyFoundation,
+  applyOwnerPolicy,
+  freeOwnerId,
   subjectA,
   tenantA,
   grantA,
@@ -194,10 +196,12 @@ test("free operations report overruns without enforcing a billing budget", async
   withDeployDatabase(async (pool) => {
     await applyFoundation(pool)
     await grant(pool)
+    await applyOwnerPolicy(pool)
     const reserved = await reserveBudget(
       {
         subject: subjectA,
         operationId: "exempt-overrun",
+        actorUserId:freeOwnerId,
         amountMicroUsd: 2000000n,
       },
       pool,

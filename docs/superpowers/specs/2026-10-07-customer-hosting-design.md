@@ -1,3 +1,5 @@
+> Policy update 2026-10-07: the owner subsequently restricted free app deployment exclusively to Jose's verified account. The Bayamón/Otto exceptions below are historical and superseded by `docs/release/owner-only-free-deployment.md`.
+
 # AXXES.dev Deploy — customer hosting design
 
 Date: 2026-10-07. Status: approved by the owner on 2026-10-07; foundation implemented on a feature branch, no infrastructure provisioned and no billing changed.
