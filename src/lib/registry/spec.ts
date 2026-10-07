@@ -21,6 +21,9 @@ export type Field = {
 }
 
 export type Operation = {
+  /** Session management is not a bearer-authenticated integration endpoint. */
+  authentication?: "session" | "bearer"
+
   id: string
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
   path: string

@@ -23,7 +23,7 @@ type Token = {
   createdAt: string
 }
 
-export function TokenManager({ origin }: { origin: string }) {
+export function TokenManager({ origin, manageOnly=false }: { origin: string; manageOnly?:boolean }) {
   const router = useRouter()
   const [tokens, setTokens] = useState<Token[] | null>(null)
   const [name, setName] = useState("")
@@ -88,7 +88,7 @@ export function TokenManager({ origin }: { origin: string }) {
 
   return (
     <div className="space-y-8">
-      {revealed && (
+      {!manageOnly && revealed && (
         <section className="rounded-xl border border-accent/40 bg-accent/5 p-5">
           <h3 className="text-sm font-semibold text-text">Your new token</h3>
           <p className="mt-1 text-sm text-muted">
@@ -115,7 +115,7 @@ export function TokenManager({ origin }: { origin: string }) {
         </section>
       )}
 
-      <form onSubmit={create} className="rounded-xl border border-line p-5">
+      {!manageOnly && <form onSubmit={create} className="rounded-xl border border-line p-5">
         <h3 className="text-sm font-semibold text-text">Create a token</h3>
         <p className="mt-1 text-sm text-muted">
           A token acts as you, inside your workspace, with your role. It can never reach more than
@@ -182,7 +182,7 @@ export function TokenManager({ origin }: { origin: string }) {
         <button type="submit" className="btn-primary mt-4" disabled={busy || !name.trim()}>
           {busy ? "Creating…" : "Create token"}
         </button>
-      </form>
+      </form>}
 
       <section>
         <h3 className="text-sm font-semibold text-text">Your tokens</h3>

@@ -62,7 +62,7 @@
         },
         {
           "name": "Test hosting and platform access on Linux PostgreSQL",
-          "run": "npm run test:deploy && npm run test:deploy:db && npx tsx --test tests/platform-access/*.test.ts",
+          "run": "npm run test:deploy && npm run test:deploy:db && npx tsx --test tests/platform-access/*.test.ts tests/navigation/*.test.ts",
           "env": {
             "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
           }
