@@ -1,3 +1,4 @@
+import {assertFreeDeploymentOwner} from "./free-owner"
 import type { Pool, PoolClient } from "pg"
 import { hostingPool, inHostingTransaction } from "./postgres"
 import { loadHostingPolicy } from "./exemptions"
@@ -13,6 +14,7 @@ export async function reserveBudget(
     subject: HostingSubject
     operationId: string
     amountMicroUsd: bigint
+    actorUserId?: string
   },
   pool: Pool = hostingPool(),
   at: Date = new Date(),
@@ -35,6 +37,7 @@ export async function reserveBudget(
     )
     if (prior.rowCount) {
       const row = prior.rows[0]
+      if(row.exemption_grant_id)await assertFreeDeploymentOwner(input.actorUserId,client)
       if (BigInt(row.amount_micro_usd) !== input.amountMicroUsd)
         throw new Error("Reservation conflict")
       if (row.state !== "reserved")
@@ -45,6 +48,7 @@ export async function reserveBudget(
       }
     }
     const policy = await loadHostingPolicy(input.subject, at, client)
+    if(policy.exempt)await assertFreeDeploymentOwner(input.actorUserId,client)
     if (!policy.exempt) {
       const reserved = await client.query(
         "UPDATE deploy_billing_accounts SET available_micro_usd=available_micro_usd-$2,updated_at=now() WHERE tenant_id=$1 AND available_micro_usd>=$2 RETURNING tenant_id",

@@ -2,7 +2,7 @@ import {Pool} from 'pg'
 import {randomUUID} from 'node:crypto'
 const [beneficiary,rawTenantId,issuedBy,...extra]=process.argv.slice(2)
 const tenantId=(rawTenantId??'').toLowerCase()
-if(extra.length||!['jose','bayamon','otto'].includes(beneficiary)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(tenantId??'')||!issuedBy||!process.env.DATABASE_URL)throw new Error('Usage: DATABASE_URL=... node scripts/deploy-bind-exemption.mjs beneficiary verified-tenant-uuid issued-by')
+if(extra.length||beneficiary!=='jose'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(tenantId??'')||!issuedBy||!process.env.DATABASE_URL)throw new Error('Usage: DATABASE_URL=... node scripts/deploy-bind-exemption.mjs beneficiary verified-tenant-uuid issued-by')
 const pool=new Pool({connectionString:process.env.DATABASE_URL,max:1,connectionTimeoutMillis:10000,statement_timeout:10000})
 const client=await pool.connect()
 try{

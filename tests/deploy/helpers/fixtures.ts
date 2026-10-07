@@ -53,3 +53,10 @@ export async function rate(
     [rateA, numerator, denominator],
   )
 }
+export const freeOwnerId='verified-jose'
+export async function applyOwnerPolicy(pool:Pool){
+ await pool.query('CREATE TABLE IF NOT EXISTS "user"(id text PRIMARY KEY,email text)')
+ await pool.query('INSERT INTO "user"(id,email) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',[freeOwnerId,'owner@fixture.test'])
+ await pool.query(await readFile('db/deploy/003-owner-only-free-deploy.sql','utf8'))
+ await pool.query('INSERT INTO deploy_free_deployment_owner(user_id,bound_by,reason) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[freeOwnerId,'verified-test-admin','Owner-only free deployment policy'])
+}

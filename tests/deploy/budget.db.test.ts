@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import { withDeployDatabase } from "./helpers/postgres"
 import {
   applyFoundation,
+  applyOwnerPolicy,
+  freeOwnerId,
   subjectA,
   tenantA,
   tenantB,
@@ -131,7 +133,9 @@ test("exempt operations need no balance and remain zero-charge after revocation"
   withDeployDatabase(async (pool) => {
     await applyFoundation(pool)
     await grant(pool)
+    await applyOwnerPolicy(pool)
     const input = {
+      actorUserId:freeOwnerId,
       subject: subjectA,
       operationId: "free",
       amountMicroUsd: 2000000n,

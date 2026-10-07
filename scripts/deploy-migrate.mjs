@@ -4,7 +4,7 @@ if(!process.env.DATABASE_URL||process.argv[2]!=='--apply')throw new Error('Use D
 const pool=new Pool({connectionString:process.env.DATABASE_URL,max:1,connectionTimeoutMillis:10000,statement_timeout:30000})
 const client=await pool.connect()
 try{
- for(const file of ['001-foundation.sql','002-source-intake.sql']){
+ for(const file of ['001-foundation.sql','002-source-intake.sql','003-owner-only-free-deploy.sql']){
   await client.query(await readFile(new URL('../db/deploy/'+file,import.meta.url),'utf8'))
   console.log('Applied owned hosting migration '+file)
  }

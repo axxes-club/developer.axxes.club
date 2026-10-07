@@ -5,6 +5,7 @@ import { requireHostingAccess } from "../../src/lib/deploy/authorization"
 
 const start = new Date("2026-10-01T00:00:00Z")
 const end = new Date("2026-11-01T00:00:00Z")
+const paidDeployment={policy:{exempt:false,grantId:null,paymentRequired:true,chargeUsage:true,enforceBillingBudget:true},freeOwnerUserId:null}
 const subject = { tenantId: "a", projectId: "p" }
 for (const beneficiary of ["jose", "bayamon", "otto"] as const) {
   test(`${beneficiary} exemption requires an active explicitly scoped grant`, () => {
@@ -70,8 +71,8 @@ test("invalid dates and backwards intervals are rejected", () => {
 test("authorization enforces specific hosting roles and fails closed", () => {
   for (const role of ["owner", "admin"])
     for (const operation of ["inspect", "usage", "billing", "deploy"] as const)
-      assert.doesNotThrow(() => requireHostingAccess({ role }, operation))
-  assert.doesNotThrow(() => requireHostingAccess({ role: "manager" }, "deploy"))
+      assert.doesNotThrow(() => requireHostingAccess({ role,userId:"fixture" }, operation,paidDeployment))
+  assert.doesNotThrow(() => requireHostingAccess({ role: "manager",userId:"fixture" }, "deploy",paidDeployment))
   for (const role of ["manager", "member", "viewer"])
     assert.throws(() => requireHostingAccess({ role }, "inspect"))
   for (const role of ["member", "viewer"]) {
