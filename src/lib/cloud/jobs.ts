@@ -34,4 +34,8 @@ export async function completeJob(job:ClaimedJob,state:'succeeded'|'failed'|'rec
 export async function cancelJob(ctx:CloudContext,id:string,connection:Pool|PoolClient=hostingPool()){
  requireCloudRole(ctx,'operate');const row=await connection.query("UPDATE cloud_jobs SET state='cancel_requested',updated_at=statement_timestamp() WHERE tenant_id=$1 AND id=$2 AND state IN('queued','running','reconciling') RETURNING id,state",[ctx.tenant.id,id]);if(!row.rowCount)throw new CloudError('job_not_cancelable',409);return row.rows[0]
 }
-export async function checkpointJob(..._args:any[]):Promise<void>{throw Error('not_implemented')}
+export async function checkpointJob(job:ClaimedJob,result:unknown,pool:Pool=hostingPool()):Promise<void>{
+ const encoded=JSON.stringify(result);if(!encoded||Buffer.byteLength(encoded)>65536)throw new CloudError('invalid_provider_checkpoint')
+ const row=await pool.query("UPDATE cloud_jobs SET provider_result=$4,updated_at=statement_timestamp() WHERE tenant_id=$1 AND id=$2 AND lease_token=$3 AND lease_until>statement_timestamp() AND state IN('running','reconciling','cancel_requested') RETURNING id",[job.tenant_id,job.id,job.lease_token,encoded]);if(row.rowCount!==1)throw new CloudError('job_lease_lost',409)
+ job.provider_result=result
+}
