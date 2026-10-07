@@ -61,6 +61,13 @@
           }
         },
         {
+          "name": "Test hosting foundation on Linux PostgreSQL",
+          "run": "npm run test:deploy && npm run test:deploy:db",
+          "env": {
+            "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
+          }
+        },
+        {
           "name": "Build on Linux with fixture configuration",
           "run": "npm run build",
           "env": {

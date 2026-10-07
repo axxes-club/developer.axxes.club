@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:deploy": "tsx --test tests/deploy/policy.test.ts tests/deploy/pricing.test.ts tests/deploy/inspect.test.ts tests/deploy/inspect-route.test.ts",
+    "test:deploy:db": "tsx --test tests/deploy/baseline.test.ts tests/deploy/exemptions.db.test.ts tests/deploy/ledger.db.test.ts tests/deploy/budget.db.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
