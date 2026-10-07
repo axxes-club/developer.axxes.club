@@ -15,14 +15,10 @@ export const product = defineProduct({
   sections: [
     { href: "/dashboard/developer", label: "Overview", group: "Get started" },
     { href: "/dashboard/developer/quickstart", label: "Quickstart", group: "Get started" },
-    { href: "/dashboard/developer/apps", label: "Your apps", group: "Build" },
-    { href: "/dashboard/developer/keys", label: "API keys", group: "Build" },
-    { href: "/dashboard/developer/webhooks", label: "Webhooks", group: "Build" },
     { href: "/dashboard/developer/prompts", label: "AI prompts", group: "Build" },
     { href: "/dashboard/developer/docs", label: "API reference", group: "Reference" },
     { href: "/dashboard/developer/guides", label: "Integration guides", group: "Reference" },
     { href: "/dashboard/developer/changelog", label: "Changelog", group: "Reference" },
-    { href: "/dashboard/developer/usage", label: "Usage & limits", group: "Account" },
-    { href: "/dashboard/developer/plans", label: "Plans", group: "Account" },
+    { href: "/dashboard/developer/plans", label: "API plan limits", group: "Account" },
   ],
 })
