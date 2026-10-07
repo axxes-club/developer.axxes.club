@@ -1,6 +1,6 @@
 import {CloudError} from '../types';import {readBytes} from '../http'
 export const CUSTOMER_PROJECT='axxes-customer-hosting';export const CUSTOMER_REGION='us-west1'
-export type GcpRequest={api:'run'|'build'|'storage'|'artifact'|'iam'|'logs';path:string;method?:'GET'|'POST'|'PATCH'|'DELETE';body?:unknown;bytes?:Uint8Array;contentType?:string}
+export type GcpRequest={api:'run'|'build'|'storage'|'artifact'|'iam'|'logs';path:string;method?:'GET'|'POST'|'PATCH'|'DELETE'|'PUT';body?:unknown;bytes?:Uint8Array;contentType?:string}
 const roots={run:'https://run.googleapis.com/v2/',build:'https://cloudbuild.googleapis.com/v1/',storage:'https://storage.googleapis.com/',artifact:'https://artifactregistry.googleapis.com/v1/',iam:'https://iam.googleapis.com/v1/',logs:'https://logging.googleapis.com/v2/'}
 export function serviceName(resourceId:string){if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(resourceId))throw new CloudError('invalid_provider_binding');return 'cloud-'+resourceId.replaceAll('-','').slice(0,24)}
 export function providerPath(input:GcpRequest){
