@@ -87,6 +87,25 @@
             "NEXT_PUBLIC_SITE_URL": "http://localhost:3000",
             "NEXT_TELEMETRY_DISABLED": "1"
           }
+        },
+        {
+          "name": "Install Linux browser",
+          "run": "npx playwright install --with-deps chromium"
+        },
+        {
+          "name": "Verify secure Cloud sessions and tenant UI in Chromium",
+          "run": "sudo -E \"$(command -v node)\" --import tsx scripts/cloud-browser-fixture.ts",
+          "env": {
+            "DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci",
+            "BETTER_AUTH_SECRET": "ci-only-placeholder-secret-with-at-least-32-characters",
+            "AUTH_SECRET": "ci-only-placeholder-secret-with-at-least-32-characters",
+            "BETTER_AUTH_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_APP_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_BASE_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_SITE_URL": "http://localhost:3000",
+            "NEXT_TELEMETRY_DISABLED": "1",
+            "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
+          }
         }
       ]
     }
