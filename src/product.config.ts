@@ -15,6 +15,7 @@ export const product = defineProduct({
   sections: [
     { href: "/dashboard/developer", label: "Overview", group: "Get started" },
     { href: "/dashboard/developer/quickstart", label: "Quickstart", group: "Get started" },
+    { href: "/dashboard/developer/keys", label: "Personal tokens", group: "Account" },
     { href: "/dashboard/developer/prompts", label: "AI prompts", group: "Build" },
     { href: "/dashboard/developer/docs", label: "API reference", group: "Reference" },
     { href: "/dashboard/developer/guides", label: "Integration guides", group: "Reference" },

@@ -172,7 +172,7 @@ export const API_PRODUCTS: ApiProduct[] = [
     summary: "The knowledge base: spaces, pages, backlinks and versions.",
     url: "https://nexus.axxes.club",
     surface: "read-write",
-    note: "Docs, tokens and an AI import library live in the product; these are the endpoints a script uses.",
+    note: "Personal tokens are managed in the signed-in interface. A programmatic content API is not advertised here.",
     baseUrl: "https://nexus.axxes.club",
     resources: [
       {
@@ -182,6 +182,7 @@ export const API_PRODUCTS: ApiProduct[] = [
         operations: [
           {
             id: "nexus.tokens.list",
+            authentication: "session",
             method: "GET",
             path: "/api/developer/tokens",
             summary: "List your live tokens.",
@@ -194,24 +195,6 @@ export const API_PRODUCTS: ApiProduct[] = [
               ],
             },
             errors: [{ status: 401, code: "unauthorized", meaning: "No session. Tokens are managed from the signed-in UI, not over the API." }],
-          },
-        ],
-      },
-      {
-        key: "import",
-        label: "Import",
-        description: "Getting content in from elsewhere.",
-        operations: [
-          {
-            id: "nexus.import.prompts",
-            method: "GET",
-            path: "/dashboard/developer/import-prompts",
-            summary: "Prompts that return content in the shape Nexus accepts.",
-            description:
-              "Five prompts, each written for a specific model and job, each ending in the same JSON envelope. Point a model at a folder of notes, a repository or another tool's export and paste the result into the importer.",
-            requires: "prompts.library",
-            response: { prompts: [{ id: "onboard", title: "Turn a folder of notes into a space", bestFor: "Claude, ChatGPT with file access" }] },
-            errors: [],
           },
         ],
       },
