@@ -17,12 +17,21 @@ export async function quoteResource(ctx:CloudContext,value:unknown,pool:Pool=hos
  const hash=operationHash(r.id,input.operation,input.desired);const rate=rates.rows[0];const result=await pool.query("INSERT INTO cloud_quotes(tenant_id,resource_id,generation,actor_id,operation,input_hash,rate_version_id,amount_micro_usd,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,statement_timestamp()+interval '5 minutes') RETURNING id,expires_at",[ctx.tenant.id,r.id,r.generation,ctx.userId,input.operation,hash,rate.id,rate.amount]);return {id:result.rows[0].id,tenantId:ctx.tenant.id,resourceId:r.id,generation:Number(r.generation),amountMicroUsd:rate.amount,rateVersionId:rate.id,expiresAt:result.rows[0].expires_at.toISOString(),inputHash:hash}
 }
 export async function requestOperation(ctx:CloudContext,value:unknown,pool:Pool=hostingPool()){
- requireCloudRole(ctx,'operate');const input=quoteInput.extend({quoteId:z.uuid(),idempotencyKey:z.string().min(1).max(128),expectedGeneration:z.number().int().positive().safe()}).strict().parse(value);validateDesired(input.operation,input.desired)
- const caps=availableCapabilities(cloudConfiguration());if(!caps.length)throw new CloudError('app_provisioning_unavailable',503)
+ requireCloudRole(ctx,'operate');const input=quoteInput.extend({quoteId:z.uuid().optional(),idempotencyKey:z.string().min(1).max(128),expectedGeneration:z.number().int().positive().safe()}).strict().parse(value);validateDesired(input.operation,input.desired)
+ const caps=availableCapabilities(cloudConfiguration());if(input.operation!=='delete'&&!caps.length)throw new CloudError('app_provisioning_unavailable',503)
  return inHostingTransaction(pool,async client=>{
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[JSON.stringify(['cloud-admission',ctx.tenant.id,input.idempotencyKey])]);const r=await ownedResource(ctx,input.resourceId,client,true);const hash=operationHash(r.id,input.operation,input.desired)
   const prior=await client.query('SELECT id,input_hash,actor_id,state FROM cloud_jobs WHERE tenant_id=$1 AND idempotency_key=$2',[ctx.tenant.id,input.idempotencyKey]);if(prior.rowCount){if(prior.rows[0].input_hash!==hash||prior.rows[0].actor_id!==ctx.userId)throw new CloudError('idempotency_conflict',409);return {id:prior.rows[0].id,state:prior.rows[0].state}}
   if(Number(r.generation)!==input.expectedGeneration||['deleting','deleted'].includes(r.state))throw new CloudError('resource_changed',409)
+  if(input.operation==='delete'){
+   const next=Number(r.generation)+1
+   await client.query("UPDATE cloud_resources SET generation=$3,state='deleting' WHERE tenant_id=$1 AND id=$2",[ctx.tenant.id,r.id,next])
+   await client.query("UPDATE cloud_jobs SET state='cancel_requested',updated_at=statement_timestamp() WHERE tenant_id=$1 AND resource_id=$2 AND state IN('queued','running','reconciling')",[ctx.tenant.id,r.id])
+   const job=await client.query("INSERT INTO cloud_jobs(tenant_id,resource_id,generation,actor_id,operation,idempotency_key,input_hash,desired,quote) VALUES($1,$2,$3,$4,'delete',$5,$6,'{}',$7) RETURNING id,state",[ctx.tenant.id,r.id,next,ctx.userId,input.idempotencyKey,hash,JSON.stringify({amountMicroUsd:'0',deployProjectId:r.deploy_project_id,exempt:false,cleanup:true})])
+   await client.query("INSERT INTO cloud_audit_events(tenant_id,actor_id,kind,resource_id,payload) VALUES($1,$2,'cleanup_requested',$3,$4)",[ctx.tenant.id,ctx.userId,r.id,JSON.stringify({jobId:job.rows[0].id,generation:next})])
+   return job.rows[0]
+  }
+  if(!input.quoteId)throw new CloudError('quote_required')
   const quotes=await client.query('SELECT * FROM cloud_quotes WHERE tenant_id=$1 AND id=$2 AND resource_id=$3 AND actor_id=$4 AND generation=$5 AND operation=$6 AND input_hash=$7 AND expires_at>statement_timestamp()',[ctx.tenant.id,input.quoteId,r.id,ctx.userId,r.generation,input.operation,hash]);if(quotes.rowCount!==1)throw new CloudError('quote_expired_or_changed',409)
   const subject={tenantId:ctx.tenant.id,projectId:r.deploy_project_id};const policy=await authorizeHostingDeployment(ctx,subject,client);if(!policy.exempt&&!caps[0].paid)throw new CloudError('paid_provisioning_unavailable',503)
   if(input.operation==='deploy'){const binding=await client.query('SELECT project_id FROM deploy_source_bindings WHERE tenant_id=$1 AND project_id=$2',[ctx.tenant.id,subject.projectId]);if(binding.rowCount!==1)throw new CloudError('repository_not_connected',409)}
