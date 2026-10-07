@@ -95,12 +95,16 @@ This plan implements spec increment 1 only. Increment 2 needs a separate written
 
 **Files:** Create docs/release/deploy-foundation-verification.md and docs/release/deploy-exemption-binding.md.
 
-- [ ] Inspect actual changes against the approved spec and this plan. Verify there is no public Deploy launcher, published pricing, production migration, real payment request or placeholder deployment success. No runtime-hosting claim is made.
-- [ ] Run `npm run test:deploy`, `npm run test:deploy:db` in Linux, `npx tsc --noEmit`, and the current AXXES CI workflow. Record exact commit, commands, results and limits; failed/skipped tests are reported, not hidden. Build under Linux using existing Cloud Build/CI facilities without redeploying production.
-- [ ] Document an exemption binding runbook: administrative identity verification, exact tenant/project IDs, beneficiary, effective time, grant issuer and audit review. Do not guess bindings or query/print secrets. Confirm no account is marked chargeable during intended exempt pilot setup before binding verification.
-- [ ] Conduct code review appropriate to the selected execution method; fix substantive findings and rerun affected checks. Prepare a draft PR with problem, concrete behavior, validation and remaining hosting prerequisites. Do not merge or publish without subsequent authorization.
-- [ ] Commit verification artifacts and report the foundation's actual capabilities and limitations. Present separate increment-2 and increment-3 planning scopes with infrastructure and payment prerequisites, before authorizing a public paid launch.
+- [x] Inspect actual changes against the approved spec and this plan. Verify there is no public Deploy launcher, published pricing, production migration, real payment request or placeholder deployment success. No runtime-hosting claim is made.
+- [x] Run `npm run test:deploy`, `npm run test:deploy:db` in Linux, `npx tsc --noEmit`, and the current AXXES CI workflow. Record exact commit, commands, results and limits; failed/skipped tests are reported, not hidden. Build under Linux using existing Cloud Build/CI facilities without redeploying production.
+- [x] Document an exemption binding runbook: administrative identity verification, exact tenant/project IDs, beneficiary, effective time, grant issuer and audit review. Do not guess bindings or query/print secrets. Confirm no account is marked chargeable during intended exempt pilot setup before binding verification.
+- [x] Conduct code review appropriate to the selected execution method; fix substantive findings and rerun affected checks. Prepare a draft PR with problem, concrete behavior, validation and remaining hosting prerequisites. Do not merge or publish without subsequent authorization.
+- [x] Commit verification artifacts and report the foundation's actual capabilities and limitations. Present separate increment-2 and increment-3 planning scopes with infrastructure and payment prerequisites, before authorizing a public paid launch.
 
 ## Self-review
 
 Spec mapping: purpose, alternatives and product identity remain in the approved design; identity/exemptions map to Task 2; commercial model to Task 3; durable ledger and provisionable-work budgets to Task 4; migration compatibility to Task 5; security, Linux evidence and honest reporting to Tasks 1/6. Runtime isolation/builds/GitHub import/previews/domains/rollback and runtime budget enforcement are deliberately deferred to increments 2/3, not treated as completed by this foundation. Payments and exact public SKU rates require measured costs and verified production collection. All five Review Focus conditions have named tests above. No shared migrations or launch step is authorized by this plan.
+
+## Execution evidence
+
+Native execution completed on feat/deploy-foundation. Draft PR: https://github.com/axxes-club/developer.axxes.club/pull/5. Linux Cloud Build b77fa101 passed 37 foundation tests, TypeScript and the Next.js production build after independent review fixes and regression verification. GitHub AXXES CI runs on the draft PR; inspect its current status for the merge gate. No production migration, billing change or hosting deployment was made.
