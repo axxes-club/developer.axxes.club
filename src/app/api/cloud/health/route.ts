@@ -1,0 +1,1 @@
+export function GET(){const configured=!!process.env.DATABASE_URL&&!!process.env.CLOUD_OIDC_CLIENT_SECRET;return Response.json({service:'AXXES Cloud',configured},{status:configured?200:503,headers:{'cache-control':'no-store'}})}

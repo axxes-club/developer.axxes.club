@@ -22,7 +22,11 @@ export async function reserveBudget(
   validateMoney(input.amountMicroUsd)
   if (!input.operationId || input.operationId.length > 512)
     throw new Error("Invalid operation id")
-  return inHostingTransaction(pool, async (client) => {
+  return inHostingTransaction(pool,client=>reserveBudgetInTransaction(input,client,at))
+}
+export type BudgetInput=Parameters<typeof reserveBudget>[0]
+/** Shared control-plane admission uses the caller's transaction, never nested BEGIN. */
+export async function reserveBudgetInTransaction(input:BudgetInput,client:PoolClient,at:Date=new Date()):Promise<ReservationResult>{
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
       JSON.stringify([
         "budget",
@@ -71,7 +75,6 @@ export async function reserveBudget(
       reservationId: result.rows[0].id,
       status: policy.exempt ? "exempt" : "reserved",
     }
-  })
 }
 type ReservationSubject = { subject: HostingSubject; reservationId: string }
 async function lockedReservation(
