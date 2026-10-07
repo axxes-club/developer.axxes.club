@@ -19,12 +19,15 @@ export async function prepareAppInfrastructure(api:GcpApi,resourceId:string,tena
  let stored=await api({api:'storage',path:'storage/v1/b/'+bucket,method:'GET'})
  if(!stored)stored=await api({api:'storage',path:'storage/v1/b?project='+CUSTOMER_PROJECT,method:'POST',body:{name:bucket,location:CUSTOMER_REGION,labels:{'axxes-resource':resourceId,'axxes-tenant':tenantId},iamConfiguration:{uniformBucketLevelAccess:{enabled:true},publicAccessPrevention:'enforced'},softDeletePolicy:{retentionDurationSeconds:'0'},lifecycle:{rule:[{action:{type:'Delete'},condition:{age:1}}]}}})
  if(stored?.name!==bucket||stored?.labels?.['axxes-resource']!==resourceId||stored?.labels?.['axxes-tenant']!==tenantId)throw new CloudError('provider_binding_mismatch',409)
+ if(String(stored.projectNumber)!=='447016917238'||stored.iamConfiguration?.uniformBucketLevelAccess?.enabled!==true||stored.iamConfiguration?.publicAccessPrevention!=='enforced'||String(stored.softDeletePolicy?.retentionDurationSeconds)!=='0'||stored.versioning?.enabled===true||stored.retentionPolicy||stored.defaultEventBasedHold===true||!stored.lifecycle?.rule?.some((r:any)=>r.action?.type==='Delete'&&r.condition?.age===1&&Object.keys(r.condition).length===1))throw new CloudError('infrastructure_security_mismatch',409)
  const policy=await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam?optionsRequestedPolicyVersion=3',method:'GET'})
  const member='serviceAccount:'+email(buildId)
+ const logExpression="resource.name.startsWith('projects/_/buckets/"+bucket+"/objects/log-')"
+ for(const row of (policy?.bindings??[])){if(row.members.some((m:string)=>['allUsers','allAuthenticatedUsers'].includes(m))||row.members.includes(member)&&!(row.role==='roles/storage.objectViewer'&&!row.condition||row.role==='roles/storage.objectCreator'&&(row.condition as any)?.expression===logExpression))throw new CloudError('infrastructure_security_mismatch',409)}
  const restricted=grant(policy,'roles/storage.objectViewer',member)
  restricted.version=3
  restricted.bindings=(restricted.bindings??[]).map(row=>row.role==='roles/storage.objectCreator'?{...row,members:row.members.filter(m=>m!==member)}:row).filter(row=>row.members.length)
- restricted.bindings.push({role:'roles/storage.objectCreator',members:[member],condition:{title:'build-log-output-only',expression:"resource.name.startsWith('projects/_/buckets/"+bucket+"/objects/log-')"}})
+ restricted.bindings.push({role:'roles/storage.objectCreator',members:[member],condition:{title:'build-log-output-only',expression:logExpression}})
  await api({api:'storage',path:'storage/v1/b/'+bucket+'/iam',method:'PUT',body:restricted})
 
  const repoPath='projects/'+CUSTOMER_PROJECT+'/locations/'+CUSTOMER_REGION+'/repositories/'+service
@@ -33,6 +36,7 @@ export async function prepareAppInfrastructure(api:GcpApi,resourceId:string,tena
  if(!repo)throw new CloudError('infrastructure_pending',503)
  if(repo.name!==repoPath||repo.labels?.['axxes-resource']!==resourceId||repo.labels?.['axxes-tenant']!==tenantId)throw new CloudError('provider_binding_mismatch',409)
  const repoPolicy=await api({api:'artifact',path:repoPath+':getIamPolicy',method:'GET'})
+ for(const row of (repoPolicy?.bindings??[]))if(row.members.includes(member)&&!(row.role==='roles/artifactregistry.writer'&&!row.condition))throw new CloudError('infrastructure_security_mismatch',409)
  await api({api:'artifact',path:repoPath+':setIamPolicy',method:'POST',body:{policy:grant(repoPolicy,'roles/artifactregistry.writer',member)}})
  return {project:CUSTOMER_PROJECT,region:CUSTOMER_REGION,resourceId,tenantId,service,runtimeAccount:email(runtimeId)}
 }

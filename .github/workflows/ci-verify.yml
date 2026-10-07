@@ -95,7 +95,7 @@
         },
         {
           "name": "Verify secure Cloud sessions and tenant UI in Chromium",
-          "run": "sudo -E \"$(command -v node)\" --import tsx scripts/cloud-browser-fixture.ts",
+          "run": "sudo -E \"$(command -v node)\" --import tsx scripts/cloud-browser-fixture.mts",
           "env": {
             "DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci",
             "BETTER_AUTH_SECRET": "ci-only-placeholder-secret-with-at-least-32-characters",

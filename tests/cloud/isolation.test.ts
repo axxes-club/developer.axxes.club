@@ -11,7 +11,7 @@ test('resource infrastructure grants build credentials access only to its own so
   if(r.method==='GET')return created.get(r.path)??null
   const body=r.body as any
   if(r.api==='iam'&&r.path.endsWith('/serviceAccounts'))return {email:body.accountId+'@axxes-customer-hosting.iam.gserviceaccount.com',...body.serviceAccount}
-  if(r.api==='storage'&&r.path.startsWith('storage/v1/b?'))return body
+  if(r.api==='storage'&&r.path.startsWith('storage/v1/b?'))return {...body,projectNumber:'447016917238'}
   if(r.api==='artifact'&&r.path.includes('?repositoryId=')){const name=r.path.split('?')[0]+'/'+r.path.split('=')[1];created.set(name,{name,...body})}
   return {name:'op',done:true}
  }
@@ -31,4 +31,18 @@ test('existing foreign infrastructure is rejected before IAM can be modified',as
  const api=async(r:GcpRequest)=>{requests.push(r);return {name:'foreign',description:'belongs to another tenant'}}
  await assert.rejects(prepareAppInfrastructure(api,id,tenant,'cloud-worker@axxes-customer-hosting.iam.gserviceaccount.com'),/binding/)
  assert.equal(requests.filter(r=>r.method!=='GET').length,0)
+})
+
+test('correct ownership labels do not authorize public, retained or broadly writable source storage',async()=>{
+ const bucket='axxes-source-'+id.replaceAll('-','')
+ const good={name:bucket,projectNumber:'447016917238',labels:{'axxes-resource':id,'axxes-tenant':tenant},iamConfiguration:{uniformBucketLevelAccess:{enabled:true},publicAccessPrevention:'enforced'},softDeletePolicy:{retentionDurationSeconds:'0'},lifecycle:{rule:[{action:{type:'Delete'},condition:{age:1}}]}}
+ for(const patch of [{projectNumber:'other'},{iamConfiguration:{uniformBucketLevelAccess:{enabled:false},publicAccessPrevention:'inherited'}},{softDeletePolicy:{retentionDurationSeconds:'604800'}},{lifecycle:{rule:[]}}]){
+  let bucketIam=false
+  const api=async(r:GcpRequest)=>{if(r.api==='iam'&&r.method==='GET')return {email:r.path.split('/').pop(),description:'AXXES cloud '+tenant+' '+id};if(r.api==='storage'){if(r.path==='storage/v1/b/'+bucket)return {...good,...patch};bucketIam=true}return {bindings:[]}}
+  await assert.rejects(prepareAppInfrastructure(api,id,tenant,'cloud-worker@axxes-customer-hosting.iam.gserviceaccount.com'),/infrastructure_security_mismatch/)
+  assert.equal(bucketIam,false)
+ }
+ const member='serviceAccount:build-'+id.replaceAll('-','').slice(0,22)+'@axxes-customer-hosting.iam.gserviceaccount.com'
+ const api=async(r:GcpRequest)=>{if(r.api==='iam'&&r.method==='GET')return {email:r.path.split('/').pop(),description:'AXXES cloud '+tenant+' '+id};if(r.api==='storage'&&r.path==='storage/v1/b/'+bucket)return good;if(r.api==='storage')return {bindings:[{role:'roles/storage.objectAdmin',members:[member]}]};return {bindings:[]}}
+ await assert.rejects(prepareAppInfrastructure(api,id,tenant,'cloud-worker@axxes-customer-hosting.iam.gserviceaccount.com'),/infrastructure_security_mismatch/)
 })
