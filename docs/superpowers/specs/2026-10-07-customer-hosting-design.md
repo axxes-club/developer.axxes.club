@@ -1,6 +1,6 @@
 # AXXES.dev Deploy — customer hosting design
 
-Date: 2026-10-07. Status: proposed design for review; no infrastructure provisioned and no billing changed.
+Date: 2026-10-07. Status: approved by the owner on 2026-10-07; foundation implemented on a feature branch, no infrastructure provisioned and no billing changed.
 
 ## Purpose and owner requirements
 
