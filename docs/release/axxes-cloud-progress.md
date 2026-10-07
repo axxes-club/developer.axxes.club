@@ -1,27 +1,27 @@
 # AXXES Cloud execution ledger
 
-Approved spec and implementation plan: 2026-10-07. Native execution; no customer cloud launch claimed.
+Approved scope: the 2026-10-07 design and foundation plan. Existing owner authorization covers implementation, review, merge and deployment. Free app deployment remains Jose-only; paid provisioning and other infrastructure capabilities stay closed.
 
-- Task 1: capability/schema tests reproduced missing implementation, using node --import tsx --test.
-- Environment: managed sandbox denies CLI tsx IPC listeners and external DNS. Ruling: use node --import tsx for pure test execution, keep all deployment/DB verification explicitly pending, and continue authorized local implementation. Do not request an unavailable escalation or claim remote checks passed.
-- Provider adapters/capabilities must stay closed until release verification. Configuration values alone are operator release gates, not customer proof of working capabilities.
+## Verified implementation
 
-- Task 1: 2 pure tests and TypeScript passed. Task 2: owned SQL migration, scoped store and PostgreSQL regression written; DB execution pending because local listeners/external connections are blocked. No database migration has been applied.
+The console implements organization-owned projects, real inventory/activity/billing views, organization switching, host-only sessions, suspension checks, scoped read API credentials, expiration/revocation and atomic per-key rate limiting. Bearer credentials cannot call browser mutation routes. Handshake's exact confidential Cloud client was merged in PR #9 and deployed as handshake-00050-cij, without rotating shared authentication secrets.
 
-- Tasks 3–5 in progress: host-only OIDC session/auth routes, same-origin bounded API handlers, inventory APIs, transactional quote/admission, existing budget helper transaction support, owner-project grant endpoint, fenced job leases and narrowly scoped GCP REST transport. 8 pure security/HTTP/provider tests pass; TypeScript verification follows each change. Handshake client registration and DB/browser/provider tests remain pending.
-- Ruling: current Handshake signs HS256 ID tokens with the registered client's secret, matching the existing Office implementation; pin HS256 and verify required issuer/audience/nonce/subject/iat/exp instead of assuming an unconfigured RSA JWKS provider.
-- Ruling: Cloud Build create has no documented request-id deduplication parameter. A dispatched timeout stays reconciling and searches stable build tags; never blindly resubmit an ambiguous build. Source: https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.builds/create .
+Linux CI 37694764596 passed the original hosting/platform suites, Cloud pure tests, 12 PostgreSQL tests, a production build, and a Chromium HTTPS fixture. Browser checks cover anonymous gating, real project creation, tenant/role switching, one-time API credentials and use/revocation, suspended users and mobile sign-in. The browser fixture mints its own disposable sessions; it does not certify the real production Handshake exchange.
 
-- Ruling: each cloud app receives its own backing deployment project, source binding and scoped grant; cloud projects group apps for navigation. Reusing one project-wide repository binding would let one app change another app's source. Owner-free selection is therefore explicit per app, not inherited by all project members.
+Independent review identified recovery, cancellation, stale publication, mutable source binding, checkpoint loss, fail-open readiness, storage isolation and release binding defects. Regression tests reproduced them before fixes. Release binding RED: CI 37694610995; GREEN: 37694764596. Resource storage now rejects foreign projects, public/retained/versioned buckets and unexpected build-account grants. Releases have a composite job/tenant/resource/generation reference.
 
-## Local checkpoint — 2026-10-07
+## Production preparation
 
-Implemented locally: encrypted GitHub App user connection and immutable source/archive intake; per-app source/financial isolation; protected Cloud console routes for overview, projects, apps, activity, billing and settings; real project creation, organization selection and sign-out; tenant-scoped inventory counts and integer financial display. Cloud readiness requires valid OIDC configuration, a reachable database and the exact owned migration record. Unverified provisioning stays hidden.
+Applied only owned Cloud migrations 001-control-plane, 002-account-controls and 003-release-bindings through an authenticated Cloud SQL proxy. Shared identity/organization tables were not migrated. Added a dedicated cloud-env secret and cloud-console service account with secret access and Cloud SQL client permissions. GCP approved the gravy-meta service-account quota increase from 100 to 200; the earlier quota blocker is resolved.
 
-Verification: TypeScript passed. Combined Cloud, developer hosting, platform access and navigation suite passed 50/50 tests, including 16 Cloud pure tests. `git diff --check` passed. Five real PostgreSQL tests are authored (tenant isolation, single-use identity transaction, hashed/revocable session, exclusive worker lease/cancellation/generation, revoked scoped grant); execution is pending. The attempted DB command failed because DEPLOY_TEST_DATABASE_URL is unavailable. No SQL behavior is represented as verified.
+Cloud Build d4a89403-238b-430c-9522-ef844240f8e1 succeeded, including image-layer secret scanning. Runtime image: us-west1-docker.pkg.dev/gravy-meta/ci-developer/cloud@sha256:2a6ce1a40a242666942de8d2b7ea98cd13eb490f54d833631e206413e572d5ac. This console image was built at fa9fcf9; later changes correct worker-only isolation checks, add the owned release-binding migration and repair the browser harness. The console runtime code is unchanged by those corrections.
 
-Independent fresh-context review found revoked grant authority and stale/canceled job completion defects. Fixed by checking the reservation's exact active scoped Jose grant and locking the resource before completion/publication. Reviewer confirmed the fixes by inspection; DB execution remains required.
+Cloud DNS already targets the atelier-sites load balancer at 34.107.128.192 with existing wildcard TLS. A dedicated console deployment and additive exact-host route are being prepared. Record final revision, routing and live probes in axxes-cloud-verification.md after they pass.
 
-Production build attempted with fixture configuration and webpack; it failed fetching the existing Geist/Geist Mono Google fonts because fonts.googleapis.com cannot resolve. GitHub access also fails DNS resolution. Network restrictions and unavailable local listeners prevent Linux/PostgreSQL/browser/provider verification, pushing, merging and deploying from this session.
+## Remaining operational work
 
-Remaining implementation: standalone worker and actual build/preview/release/rollback/delete adapters; complete app launch controls; domains/runtime secrets/logs/usage ingestion; verified payments, funding renewal, suspension and API credentials; dedicated deploy targets and live routing/OIDC registration. The approved plan is not complete. No new service, cloud migration, production traffic change or paid provisioning was launched. Release gates must remain closed until required implementation and real verification pass.
+App provisioning stays disabled. The bounded worker engine and provider stage/build/readiness/publication/deletion contracts exist, but the standalone worker, lifecycle integration and app launch controls remain incomplete. Runtime secrets, customer domains, logs, metering, payments and funding suspension require further implementation/verification. Servers, databases, storage, Kubernetes and networking are later milestones.
+
+There is no AXXES Cloud GitHub App installed in the organization. An operator-only manifest setup script prepares read-only repository permissions, exact Cloud OAuth callback and disabled webhooks; GitHub requires the owner's authenticated registration and installation action. Generated credentials are saved privately, never displayed in the browser or logs. Paid provisioning also requires verified payment collection, measured usage and approved costed prices; candidate prices are not published.
+
+The approved operational plan is not complete. A deployed closed-capability console must not be reported as working customer app hosting or full DigitalOcean parity.
