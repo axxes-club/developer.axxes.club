@@ -68,6 +68,13 @@
           }
         },
         {
+          "name": "Test Cloud ownership and sessions on Linux PostgreSQL",
+          "run": "npm run test:cloud && node --test scripts/test-cloud-github-credentials.mjs scripts/test-cloud-ci-gate.mjs && npm run test:cloud:db",
+          "env": {
+            "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
+          }
+        },
+        {
           "name": "Build on Linux with fixture configuration",
           "run": "npm run build",
           "env": {
@@ -80,6 +87,27 @@
             "NEXT_PUBLIC_SITE_URL": "http://localhost:3000",
             "NEXT_TELEMETRY_DISABLED": "1"
           }
+        },
+        {
+          "name": "Install Linux browser",
+          "run": "sudo sh -c 'printf \"Acquire::http::Timeout \\\"15\\\";\\nAcquire::https::Timeout \\\"15\\\";\\nAcquire::Retries \\\"1\\\";\\n\" > /etc/apt/apt.conf.d/99-cloud-ci-timeouts'\nsudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|https://archive.ubuntu.com/ubuntu|g; s|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources\nnpx playwright install --with-deps chromium",
+          "timeout-minutes": 7
+        },
+        {
+          "name": "Verify secure Cloud sessions and tenant UI in Chromium",
+          "run": "sudo -E \"$(command -v node)\" --import tsx scripts/cloud-browser-fixture.mts",
+          "env": {
+            "DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci",
+            "BETTER_AUTH_SECRET": "ci-only-placeholder-secret-with-at-least-32-characters",
+            "AUTH_SECRET": "ci-only-placeholder-secret-with-at-least-32-characters",
+            "BETTER_AUTH_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_APP_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_BASE_URL": "http://localhost:3000",
+            "NEXT_PUBLIC_SITE_URL": "http://localhost:3000",
+            "NEXT_TELEMETRY_DISABLED": "1",
+            "DEPLOY_TEST_DATABASE_URL": "postgresql://ci:ci@127.0.0.1:5432/ci"
+          },
+          "timeout-minutes": 5
         }
       ]
     }

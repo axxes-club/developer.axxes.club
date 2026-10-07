@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {getCloudContext} from '@/lib/cloud/context';import {beginGithub} from '@/lib/cloud/github/oauth'
+export async function GET(){try{const ctx=await getCloudContext();if(!ctx)return NextResponse.json({error:'unauthorized'},{status:401});const result=await beginGithub(ctx);const res=NextResponse.redirect(result.url);res.cookies.set('__Host-cloud-github',result.state,{secure:true,httpOnly:true,sameSite:'lax',path:'/',maxAge:300});return res}catch{return NextResponse.json({error:'github_unavailable'},{status:503})}}

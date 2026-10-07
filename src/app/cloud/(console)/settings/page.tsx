@@ -1,0 +1,5 @@
+import {ApiKeys} from '@/components/cloud/api-keys'
+import {listCloudKeys} from '@/lib/cloud/key-store'
+import {requireCloudContext} from '@/lib/cloud/context';import {PageHeader} from '@/components/ui'
+export const metadata={title:'Settings'}
+export default async function Settings(){const ctx=await requireCloudContext();const admin=['owner','admin'].includes(ctx.role);const keys=admin?(await listCloudKeys(ctx)).map(k=>({...k,expires_at:k.expires_at.toISOString(),revoked_at:k.revoked_at?.toISOString()??null})):[];return <div className="mx-auto max-w-4xl space-y-5 px-5 py-8"><PageHeader title="Settings" description="Your cloud account and active organization."/><section className="card space-y-3 p-5"><h2 className="font-semibold">{ctx.user.name}</h2><p className="text-sm text-muted">{ctx.user.email}</p><p className="text-sm text-muted">Organization: {ctx.tenant.name}</p><p className="text-sm capitalize text-muted">Role: {ctx.role}</p><a href="https://handshake.axxes.club" className="text-sm text-accent">Manage your AXXES account →</a></section>{admin&&<ApiKeys keys={keys}/>}</div>}
