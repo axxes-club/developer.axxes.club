@@ -15,7 +15,7 @@ Use AXXES typography, lime developer accent and product terminology: Apps, Serve
 - Existing `deploy_*` schema owns hosting grants, immutable usage/rates, prepaid reservations, audited overruns, source bindings and webhook intents. Actual customer admission, OAuth setup, runtime worker, domain management and payment collection are unfinished.
 - Owner identity is bound in `deploy_free_deployment_owner`; non-Jose grants were revoked prospectively. Never restore Bayamón/Otto exceptions or grant teammates access to free deployment.
 - Last verified Stripe state could not collect payments. Recheck the live account before launch; until activated and verified, paid provisioning is unavailable. Never turn a browser redirect, manual balance edit or unsigned callback into spendable customer credit.
-- `cloud.axxes.app` resolves to the shared load balancer IP, but DNS resolution alone does not establish a routed service, certificate or working sign-in. Confirm exact host routing/certificate ownership before publishing.
+- `cloud.axxes.app` resolves to shared load balancer IP 34.107.128.192, but has no exact or wildcard URL-map host rule and currently returns HTTP 404. Confirm certificate ownership and add explicit routing before publishing.
 
 ## Approaches and selection
 
