@@ -27,6 +27,8 @@ export async function reserveBudget(
 export type BudgetInput=Parameters<typeof reserveBudget>[0]
 /** Shared control-plane admission uses the caller's transaction, never nested BEGIN. */
 export async function reserveBudgetInTransaction(input:BudgetInput,client:PoolClient,at:Date=new Date()):Promise<ReservationResult>{
+    validateMoney(input.amountMicroUsd)
+    if (!input.operationId || input.operationId.length > 512) throw new Error("Invalid operation id")
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
       JSON.stringify([
         "budget",

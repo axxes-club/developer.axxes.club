@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises'
-import {withDeployDatabase} from '../deploy/helpers/postgres';import {applyFoundation,applyOwnerPolicy,freeOwnerId,tenantA,tenantB} from '../deploy/helpers/fixtures'
-import {createProject,createResource,ownedResource,listProjects} from '../../src/lib/cloud/store';import type {CloudContext} from '../../src/lib/cloud/types'
+import {withDeployDatabase} from '../../deploy/helpers/postgres';import {applyFoundation,applyOwnerPolicy,freeOwnerId,tenantA,tenantB} from '../../deploy/helpers/fixtures'
+import {createProject,createResource,ownedResource,listProjects} from '../../../src/lib/cloud/store';import type {CloudContext} from '../../../src/lib/cloud/types'
 export const context=(tenantId=tenantA):CloudContext=>({userId:freeOwnerId,user:{name:'Owner',email:'owner@fixture.test'},tenant:{id:tenantId,name:'Fixture',slug:'fixture'},role:'owner',memberships:[],canSwitchOrg:false})
 test('owned migration is repeatable; project/resources never cross active tenant boundaries',async()=>withDeployDatabase(async pool=>{
  await applyFoundation(pool);await applyOwnerPolicy(pool);const sql=await readFile('db/cloud/001-control-plane.sql','utf8');await pool.query(sql);await pool.query(sql)
