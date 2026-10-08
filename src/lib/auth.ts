@@ -29,7 +29,8 @@ const baseAuth = betterAuth({
   advanced: cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : undefined,
   database: drizzleAdapter(db, { provider: "pg", schema }),
   databaseHooks: { session: { create: { before: async (session) => { if(!await platformAccessAllowed(session.userId)) throw new APIError('FORBIDDEN',{message:'Account access is suspended.'}); return {data:session}; } } } },
-  emailAndPassword: { enabled: true },
+  disabledPaths: ["/sign-up/email"],
+  emailAndPassword: { enabled: true, disableSignUp:true },
 })
 
 export const auth = guardPlatformAuth(baseAuth);
