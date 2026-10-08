@@ -53,8 +53,7 @@ export const listMemberships = cache(async (userId: string): Promise<Membership[
         eq(schema.tenantMemberships.userId, userId),
         isNull(schema.tenantMemberships.deletedAt),
         isNull(schema.tenants.deletedAt),
-        ne(schema.tenants.status, "suspended"),
-        ne(schema.tenants.status, "cancelled"),
+        eq(schema.tenants.status, "active"),
       ),
     )
     .orderBy(desc(schema.tenantMemberships.isPrimary))
