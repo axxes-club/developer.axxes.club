@@ -1,7 +1,7 @@
 import "server-only"
 import { loadHostingPolicy } from "@/lib/deploy/exemptions"
 import type { HostingPolicy } from "@/lib/deploy/types"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { db, schema } from "@/lib/db"
 import {
   PLANS,
@@ -57,7 +57,9 @@ export async function gateFor(tenantId: string): Promise<Gate> {
       schema.subscriptions,
       and(
         eq(schema.subscriptions.tenantId, tenantId),
-        eq(schema.subscriptions.status, "active"),
+        // Paid access continues through a trial and while Stripe retries a failed card.
+        inArray(schema.subscriptions.status, ["active", "trialing", "past_due"]),
+        sql`(${schema.subscriptions.currentPeriodEnd} is null or ${schema.subscriptions.currentPeriodEnd} >= now())`,
       ),
     )
     .where(
