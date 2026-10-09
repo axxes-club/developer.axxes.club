@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {withDeployDatabase} from '../../deploy/helpers/postgres'
-import {applyFoundation,applyOwnerPolicy,freeOwnerId,tenantA} from '../../deploy/helpers/fixtures'
+import {applyFoundation,applyOwnerPolicy,applyPlatformIdentity,freeOwnerId,tenantA} from '../../deploy/helpers/fixtures'
 import {createProject,createResource} from '../../../src/lib/cloud/store'
 import {claimJob,withPublicationFence} from '../../../src/lib/cloud/jobs'
 import {requestOperation} from '../../../src/lib/cloud/admission'
@@ -14,6 +14,7 @@ async function fixture(pool:Pool){
  await pool.query("ALTER TABLE tenants ADD COLUMN name text,ADD COLUMN slug text,ADD COLUMN status text DEFAULT 'active',ADD COLUMN deleted_at timestamptz")
  await pool.query('CREATE TABLE tenant_memberships(user_id text,tenant_id uuid,role text,deleted_at timestamptz)')
  await pool.query("INSERT INTO tenant_memberships VALUES($1,$2,'owner',NULL)",[freeOwnerId,tenantA])
+ await applyPlatformIdentity(pool)
  await pool.query(await readFile('db/cloud/001-control-plane.sql','utf8'))
  const p=await createProject(ctx,{name:'Recovery'},pool)
  return createResource(ctx,{projectId:p.id,name:'App',spec:{kind:'app',runtime:'static',region:'us-west1',cpu:1,memoryMiB:512,minInstances:0,maxInstances:1}},pool)

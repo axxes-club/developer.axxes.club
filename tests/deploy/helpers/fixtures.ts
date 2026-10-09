@@ -60,3 +60,11 @@ export async function applyOwnerPolicy(pool:Pool){
  await pool.query(await readFile('db/deploy/003-owner-only-free-deploy.sql','utf8'))
  await pool.query('INSERT INTO deploy_free_deployment_owner(user_id,bound_by,reason) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[freeOwnerId,'verified-test-admin','Owner-only free deployment policy'])
 }
+/** Platform identity checks run on their own pool; bind it to the scoped test schema with policy tables present. */
+export async function applyPlatformIdentity(pool:Pool){
+ await pool.query('ALTER TABLE tenant_memberships ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid()')
+ await pool.query('CREATE TABLE IF NOT EXISTS platform_subject_policy(subject_kind text,subject_id text,state text,revision integer,PRIMARY KEY(subject_kind,subject_id))')
+ await pool.query('CREATE TABLE IF NOT EXISTS platform_organization_entitlements(tenant_id uuid,service_id text,allowed boolean,PRIMARY KEY(tenant_id,service_id))')
+ await pool.query('CREATE TABLE IF NOT EXISTS platform_entitlements(user_id text,tenant_id uuid,service_id text,allowed boolean,PRIMARY KEY(user_id,tenant_id,service_id))')
+ ;(globalThis as unknown as {platformAccessPool?:Pool}).platformAccessPool=pool
+}

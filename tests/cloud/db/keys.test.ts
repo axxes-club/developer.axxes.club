@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {withDeployDatabase} from '../../deploy/helpers/postgres'
-import {applyFoundation,applyOwnerPolicy,freeOwnerId,tenantA,tenantB} from '../../deploy/helpers/fixtures'
+import {applyFoundation,applyOwnerPolicy,applyPlatformIdentity,freeOwnerId,tenantA,tenantB} from '../../deploy/helpers/fixtures'
 import {issueCloudKey,authenticateCloudKey,revokeCloudKey} from '../../../src/lib/cloud/key-store'
 const ctx={userId:freeOwnerId,user:{name:'Owner',email:'owner@fixture.test'},tenant:{id:tenantA,name:'Fixture',slug:'fixture'},role:'owner',memberships:[],canSwitchOrg:false}
 test('keys are tenant-bound, revocable, bounded and rate-limited with live membership',async()=>withDeployDatabase(async pool=>{
@@ -11,6 +11,7 @@ test('keys are tenant-bound, revocable, bounded and rate-limited with live membe
  await pool.query("ALTER TABLE tenants ADD COLUMN name text,ADD COLUMN slug text,ADD COLUMN status text DEFAULT 'active',ADD COLUMN deleted_at timestamptz")
  await pool.query('CREATE TABLE tenant_memberships(user_id text,tenant_id uuid,role text,deleted_at timestamptz)')
  await pool.query("INSERT INTO tenant_memberships VALUES($1,$2,'owner',NULL)",[freeOwnerId,tenantA])
+ await applyPlatformIdentity(pool)
  for(const file of ['001-control-plane','002-account-controls'])await pool.query(await readFile('db/cloud/'+file+'.sql','utf8'))
  const key=await issueCloudKey(ctx,{name:'Automation',scopes:['read'],days:30},pool)
  const stored=(await pool.query('SELECT * FROM cloud_api_keys')).rows[0]

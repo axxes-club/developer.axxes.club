@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {withDeployDatabase} from '../../deploy/helpers/postgres'
-import {applyFoundation,applyOwnerPolicy,freeOwnerId,tenantA} from '../../deploy/helpers/fixtures'
+import {applyFoundation,applyOwnerPolicy,applyPlatformIdentity,freeOwnerId,tenantA} from '../../deploy/helpers/fixtures'
 import {createProject,createResource} from '../../../src/lib/cloud/store'
 import {claimJob,cancelJob,completeJob,revalidateJobActor,type ClaimedJob} from '../../../src/lib/cloud/jobs'
 import {grantOwnerApp} from '../../../src/lib/cloud/admission'
@@ -44,6 +44,7 @@ test('a queued free job loses spending authority when its exact app grant is rev
   await pool.query("ALTER TABLE tenants ADD COLUMN name text,ADD COLUMN slug text,ADD COLUMN status text DEFAULT 'active',ADD COLUMN deleted_at timestamptz")
   await pool.query('CREATE TABLE tenant_memberships(user_id text,tenant_id uuid,role text,deleted_at timestamptz)')
   await pool.query("INSERT INTO tenant_memberships VALUES($1,$2,'owner',NULL)",[freeOwnerId,tenantA])
+  await applyPlatformIdentity(pool)
   await pool.query(await readFile('db/cloud/001-control-plane.sql','utf8'))
   const ctx:CloudContext={userId:freeOwnerId,user:{name:'Owner',email:'owner@fixture.test'},tenant:{id:tenantA,name:'Fixture',slug:'fixture'},role:'owner',memberships:[],canSwitchOrg:false}
   const project=await createProject(ctx,{name:'Owner'},pool)
