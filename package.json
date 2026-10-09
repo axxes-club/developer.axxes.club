@@ -9,14 +9,15 @@
     "test:deploy": "tsx --test tests/deploy/policy.test.ts tests/deploy/pricing.test.ts tests/deploy/inspect.test.ts tests/deploy/inspect-route.test.ts tests/deploy/github.test.ts tests/deploy/github-access.test.ts tests/deploy/build-plan.test.ts tests/deploy/owner-only.test.ts",
     "test:deploy:db": "tsx --test tests/deploy/baseline.test.ts tests/deploy/exemptions.db.test.ts tests/deploy/ledger.db.test.ts tests/deploy/budget.db.test.ts tests/deploy/review.db.test.ts tests/deploy/intake.db.test.ts tests/deploy/ops.db.test.ts tests/deploy/owner-only.db.test.ts",
     "test:cloud": "node --import tsx --test tests/cloud/*.test.ts",
-    "test:cloud:db": "node --import tsx --test tests/cloud/db/*.test.ts"
+    "test:cloud:db": "node --import tsx --test tests/cloud/db/*.test.ts",
+    "test:security": "node --test tests/security*.test.*"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
-    "better-auth": "^1.4.19",
+    "better-auth": "1.6.33",
     "drizzle-orm": "^0.45.3",
     "jose": "6.2.12",
-    "next": "16.3.6",
+    "next": "16.3.8",
     "pg": "8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -32,9 +33,12 @@
     "@types/pg": "8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "esbuild": "0.27.4",
+    "esbuild": "0.28.2",
     "tailwindcss": "^4",
     "tsx": "4.23.15",
     "typescript": "^5"
+  },
+  "overrides": {
+    "esbuild": "$esbuild"
   }
 }

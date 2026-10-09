@@ -21,6 +21,7 @@ await withDeployDatabase(async pool=>{
  await pool.query("INSERT INTO tenant_memberships(user_id,tenant_id,role,is_primary) VALUES($1,$2,'owner',true),($1,$3,'member',false),('other-owner',$3,'owner',true)",[freeOwnerId,tenantA,tenantB])
  await pool.query('CREATE TABLE platform_subject_policy(subject_kind text,subject_id text,state text,revision int);CREATE TABLE platform_organization_entitlements(tenant_id uuid,service_id text,allowed boolean);CREATE TABLE platform_entitlements(user_id text,tenant_id uuid,service_id text,allowed boolean)')
  for(const file of ['001-control-plane','002-account-controls'])await pool.query(await readFile('db/cloud/'+file+'.sql','utf8'))
+ await pool.query(await readFile('db/security-admission.sql','utf8'))
  const schema=(await pool.query('SELECT current_schema() name')).rows[0].name
  const url=new URL(process.env.DEPLOY_TEST_DATABASE_URL!);url.searchParams.set('options','-c search_path='+schema+',public')
  const ownerToken=await createSession(freeOwnerId,pool),otherToken=await createSession('other-owner',pool)

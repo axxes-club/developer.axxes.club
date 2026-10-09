@@ -1,3 +1,4 @@
+import {admitWrite} from "@/lib/security/admission"
 import { NextResponse } from "next/server"
 import { requireContext } from "@/lib/context"
 import { createToken, isScope, listTokens, revokeToken, type TokenScope } from "@/lib/developer/tokens"
@@ -19,6 +20,7 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   const ctx = await requireContext()
+  await admitWrite(ctx)
   const body = await req.json().catch(() => ({}))
 
   const name = typeof body.name === "string" ? body.name.trim() : ""
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
 /** DELETE — revoke by ?id=. Revoked, not deleted, so history survives. */
 export async function DELETE(req: Request) {
   const ctx = await requireContext()
+  await admitWrite(ctx)
   const id = new URL(req.url).searchParams.get("id")
   if (!id) return NextResponse.json({ message: "id is required" }, { status: 400 })
   await revokeToken(ctx.userId, id)
